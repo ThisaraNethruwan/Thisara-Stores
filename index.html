@@ -23,7 +23,7 @@
   <body>
     <div id="root"></div>
 
-    <!-- PayHere SDK -->
+    <!-- PayHere SDK loader -->
     <script>
       window.payhereReady = false;
 
@@ -36,26 +36,32 @@
             return;
           }
 
-          const script = document.createElement('script');
-          script.src = 'https://sandbox.payhere.lk/pay/js/payhere.js';
-          // Change to below for live:
-          // script.src = 'https://www.payhere.lk/pay/js/payhere.js';
+          // Read mode injected by Vite at build time via index.html env replacement
+          // Falls back to sandbox for safety
+          var mode = '%VITE_PAYHERE_MODE%';
+          var isLive = mode === 'live';
+          var src = isLive
+            ? 'https://www.payhere.lk/pay/js/payhere.js'
+            : 'https://sandbox.payhere.lk/pay/js/payhere.js';
+
+          var script = document.createElement('script');
+          script.src = src;
           script.async = true;
 
-          script.onload = () => {
+          script.onload = function () {
             window.payhereReady = true;
             resolve();
           };
 
-          script.onerror = () => {
-            reject(new Error('PayHere SDK failed to load'));
+          script.onerror = function () {
+            reject(new Error('PayHere SDK failed to load. Check your internet connection.'));
           };
 
           document.body.appendChild(script);
         });
       }
 
-      // Load immediately and expose the promise globally
+      // Load immediately and expose the promise globally so Cart.jsx can await it
       window.payhereLoadPromise = loadPayhere();
     </script>
 
