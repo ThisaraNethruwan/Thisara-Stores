@@ -1,0 +1,154 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green:        #1e6641;
+  --green-mid:    #2d8653;
+  --green-light:  #52b788;
+  --green-pale:   #d8f3dc;
+  --green-faint:  #f0faf3;
+  --gold:         #f4a322;
+  --gold-light:   #fde68a;
+  --cream:        #fffbf0;
+  --dark:         #111714;
+  --dark-2:       #2c3e35;
+  --gray:         #6b7c74;
+  --gray-light:   #e8ede9;
+  --white:        #ffffff;
+  --red:          #e63946;
+  --red-light:    #ffe5e7;
+  --blue:         #2563eb;
+  --shadow-sm:    0 2px 8px rgba(0,0,0,0.06);
+  --shadow:       0 4px 20px rgba(0,0,0,0.09);
+  --shadow-lg:    0 12px 48px rgba(0,0,0,0.14);
+  --radius:       16px;
+  --radius-lg:    24px;
+  --transition:   0.22s cubic-bezier(.4,0,.2,1);
+}
+
+html { scroll-behavior: smooth; font-size: 16px; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--cream);
+  color: var(--dark);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,h2,h3,h4 { font-family: 'Fraunces', serif; line-height: 1.15; font-weight: 900; }
+a { text-decoration: none; color: inherit; }
+button { cursor: pointer; border: none; font-family: 'Nunito', sans-serif; }
+img { max-width: 100%; display: block; }
+input, textarea, select { font-family: 'Nunito', sans-serif; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--green-faint); }
+::-webkit-scrollbar-thumb { background: var(--green-light); border-radius: 4px; }
+
+/* ── Animations ── */
+@keyframes fadeUp  { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn  { from{opacity:0} to{opacity:1} }
+@keyframes popIn   { from{opacity:0;transform:scale(.88)} to{opacity:1;transform:scale(1)} }
+@keyframes float   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+@keyframes shimmer { 0%{background-position:-700px 0} 100%{background-position:700px 0} }
+@keyframes spin    { to{transform:rotate(360deg)} }
+@keyframes pulse   { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+@keyframes slideIn { from{opacity:0;transform:translateX(-16px)} to{opacity:1;transform:translateX(0)} }
+
+.fade-up   { animation: fadeUp .55s ease both; }
+.fade-up-2 { animation: fadeUp .55s .1s ease both; }
+.fade-up-3 { animation: fadeUp .55s .2s ease both; }
+.fade-up-4 { animation: fadeUp .55s .3s ease both; }
+.pop-in    { animation: popIn .4s ease both; }
+
+/* Skeleton loader */
+.skeleton {
+  background: linear-gradient(90deg,#e8ede9 25%,#f5f9f6 50%,#e8ede9 75%);
+  background-size: 700px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--radius);
+}
+
+/* ── Utilities ── */
+.container { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
+
+/* ── Buttons ── */
+.btn-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--green); color: #fff;
+  padding: 12px 26px; border-radius: 50px; font-weight: 700; font-size: 15px;
+  border: none; cursor: pointer; transition: background var(--transition), transform .15s;
+  font-family: 'Nunito', sans-serif; text-decoration: none;
+}
+.btn-primary:hover { background: var(--green-mid); transform: translateY(-1px); }
+
+.btn-secondary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: transparent; color: var(--green);
+  padding: 11px 24px; border-radius: 50px; font-weight: 700; font-size: 15px;
+  border: 2px solid var(--green); cursor: pointer; transition: all var(--transition);
+  font-family: 'Nunito', sans-serif; text-decoration: none;
+}
+.btn-secondary:hover { background: var(--green-faint); }
+
+.btn-gold {
+  background: var(--gold); color: #111;
+  padding: 12px 26px; border-radius: 50px; font-weight: 800; font-size: 15px;
+  border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'Nunito', sans-serif; transition: opacity .2s, transform .15s;
+}
+.btn-gold:hover { opacity: .9; transform: translateY(-1px); }
+
+/* ── Form inputs ── */
+.fm-input {
+  width: 100%; padding: 12px 16px;
+  border: 2px solid var(--gray-light); border-radius: 10px;
+  font-size: 15px; outline: none; background: #fff;
+  font-family: 'Nunito', sans-serif;
+  transition: border-color var(--transition);
+}
+.fm-input:focus { border-color: var(--green-light); }
+.fm-input.error { border-color: var(--red); }
+.fm-label { display: block; font-size: 13px; font-weight: 700; color: #444; margin-bottom: 6px; }
+
+/* ── Card ── */
+.card { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; }
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  overflow-y: auto; animation: fadeIn .2s ease;
+}
+.modal-box {
+  background: #fff; border-radius: var(--radius-lg); padding: 32px 28px;
+  max-width: 500px; width: 100%; position: relative;
+  box-shadow: 0 24px 64px rgba(0,0,0,.2); max-height: 90vh; overflow-y: auto;
+  animation: popIn .25s ease;
+}
+.modal-close {
+  position: absolute; top: 14px; right: 14px;
+  background: var(--green-faint); border: none;
+  width: 32px; height: 32px; border-radius: 50%;
+  font-size: 15px; cursor: pointer; color: var(--green); font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s;
+}
+.modal-close:hover { background: var(--green-pale); }
+
+/* ── Section helpers ── */
+.section-tag {
+  display: inline-block; background: var(--green-pale); color: var(--green);
+  padding: 6px 18px; border-radius: 50px; font-size: 13px; font-weight: 700; margin-bottom: 12px;
+}
+.section-title { font-size: clamp(24px,5vw,42px); font-weight: 900; margin-bottom: 16px; }
+.section-sub { font-size: 16px; color: var(--gray); line-height: 1.75; max-width: 560px; margin: 0 auto; }
+
+/* ── Product badge ── */
+.product-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  color: #fff; font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 50px; letter-spacing: .3px;
+}
