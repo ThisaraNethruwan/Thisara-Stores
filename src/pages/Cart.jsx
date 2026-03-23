@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../components/CartContext'
 import { addOrder } from '../lib/firebase'
@@ -12,11 +12,48 @@ const EMOJI = {
   'Household & Cleaning':'🧴','Personal Care':'🧼',
 }
 
-// PayHere config — reads from .env
+// PayHere config — reads from .env / Vercel environment variables
 const PAYHERE_MERCHANT_ID = import.meta.env.VITE_PAYHERE_MERCHANT_ID || ''
 const PAYHERE_MODE        = import.meta.env.VITE_PAYHERE_MODE || 'sandbox'
 
-// WhatsApp message builder
+// ─── Load PayHere SDK dynamically (reads env at runtime, works on Vercel) ───
+let payhereLoadPromise = null
+
+function loadPayHereSDK() {
+  // Return cached promise if already loading/loaded
+  if (payhereLoadPromise) return payhereLoadPromise
+
+  payhereLoadPromise = new Promise((resolve, reject) => {
+    // Already loaded
+    if (window.payhere) {
+      resolve()
+      return
+    }
+
+    const src = PAYHERE_MODE === 'live'
+      ? 'https://www.payhere.lk/pay/js/payhere.js'
+      : 'https://sandbox.payhere.lk/pay/js/payhere.js'
+
+    const script = document.createElement('script')
+    script.src   = src
+    script.async = true
+
+    script.onload = () => {
+      console.log('[PayHere] SDK loaded from:', src)
+      resolve()
+    }
+    script.onerror = () => {
+      payhereLoadPromise = null // reset so it can retry
+      reject(new Error(`PayHere SDK failed to load from ${src}`))
+    }
+
+    document.body.appendChild(script)
+  })
+
+  return payhereLoadPromise
+}
+
+// ─── WhatsApp message builder ────────────────────────────────────────────────
 function buildWhatsAppMessage(order) {
   const {
     customerName, customerPhone, deliveryAddress,
@@ -67,7 +104,7 @@ function buildWhatsAppMessage(order) {
   )
 }
 
-// Cross-browser WhatsApp opener — MUST be called synchronously inside user gesture
+// ─── Cross-browser WhatsApp opener ───────────────────────────────────────────
 function openWhatsAppWindow(message) {
   const url      = `https://wa.me/${OWNER_WHATSAPP}?text=${encodeURIComponent(message)}`
   const isMobile = /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent)
@@ -82,26 +119,25 @@ function openWhatsAppWindow(message) {
   }
 }
 
-// PayHere launcher — waits for SDK then starts payment
-// Returns Promise resolving to { success, reason?, message? }
+// ─── PayHere launcher ────────────────────────────────────────────────────────
 async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
-  // Wait for the SDK to be fully loaded (set up in index.html)
+  // Load the SDK first (cached after first call)
   try {
-    await window.payhereLoadPromise
+    await loadPayHereSDK()
   } catch (err) {
+    console.error('[PayHere] SDK load error:', err)
     return {
       success: false,
       reason: 'error',
-      message: 'PayHere SDK failed to load. Check your internet connection and try again.',
+      message: 'PayHere SDK failed to load. Please check your internet connection and try again.',
     }
   }
 
-  // Double-check window.payhere exists after load
   if (!window.payhere) {
     return {
       success: false,
       reason: 'error',
-      message: 'PayHere SDK not available. This may not work on localhost — please test on the deployed site.',
+      message: 'PayHere SDK unavailable. Please refresh and try again.',
     }
   }
 
@@ -111,7 +147,7 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
       merchant_id: PAYHERE_MERCHANT_ID,
       return_url:  `${window.location.origin}/order-success`,
       cancel_url:  `${window.location.origin}/cart`,
-      notify_url:  '', // Add your Firebase Cloud Function URL here when ready
+      notify_url:  '',
       order_id:    orderId,
       items:       `${SHOP_NAME} Order #${orderId}`,
       amount:      amount.toFixed(2),
@@ -130,6 +166,7 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
   })
 }
 
+// ─── Component ───────────────────────────────────────────────────────────────
 export default function Cart() {
   const { cart, removeFromCart, updateQty, clearCart, total, count } = useCart()
   const navigate = useNavigate()
@@ -139,6 +176,15 @@ export default function Cart() {
   const [errors, setErrors]         = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('cod')
+
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+
+  // Preload the PayHere SDK as soon as user switches to card payment
+  useEffect(() => {
+    if (paymentMethod === 'card' && !isLocalhost) {
+      loadPayHereSDK().catch(err => console.warn('[PayHere] Preload failed:', err))
+    }
+  }, [paymentMethod, isLocalhost])
 
   const deliveryFee = useMemo(() => {
     if (total >= FREE_DELIVERY_THRESHOLD) return 0
@@ -192,7 +238,7 @@ export default function Cart() {
     tempOrderId,
   })
 
-  // COD flow — open WhatsApp synchronously then save to Firebase
+  // COD flow
   const handleCODOrder = () => {
     if (!validate()) { toast.error('Please fill all required fields'); return }
     setSubmitting(true)
@@ -211,30 +257,27 @@ export default function Cart() {
     setSubmitting(false)
   }
 
-  // Card flow — wait for PayHere SDK, save to Firebase, launch PayHere, handle result
+  // Card flow
   const handleCardOrder = async () => {
     if (!validate()) { toast.error('Please fill all required fields'); return }
+
     if (!PAYHERE_MERCHANT_ID) {
-      toast.error('PayHere not configured. Add VITE_PAYHERE_MERCHANT_ID to your Vercel environment variables.')
+      toast.error('PayHere not configured. Add VITE_PAYHERE_MERCHANT_ID to Vercel environment variables.')
+      return
+    }
+
+    if (isLocalhost) {
+      toast.error('PayHere does not work on localhost. Deploy to Vercel and test there.', { duration: 5000 })
       return
     }
 
     setSubmitting(true)
-
-    // Show helpful message if on localhost
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    if (isLocalhost) {
-      toast.error('PayHere does not work on localhost. Please deploy to Vercel and test there.', { duration: 5000 })
-      setSubmitting(false)
-      return
-    }
 
     const resolvedFee   = deliveryFee ?? 0
     const resolvedTotal = total + resolvedFee
     const tempOrderId   = `TS${Math.floor(Math.random() * 90000) + 10000}`
     const orderData     = buildOrderData(resolvedFee, resolvedTotal, tempOrderId, 'pending')
 
-    // Pre-save order with paymentStatus: pending
     try { await addOrder({ ...orderData, whatsappSent: false }) }
     catch (e) { console.error('Firebase pre-save error (non-critical):', e) }
 
@@ -383,7 +426,6 @@ export default function Cart() {
                   ))}
                 </div>
 
-                {/* Delivery notice */}
                 {total >= FREE_DELIVERY_THRESHOLD ? (
                   <div className="notice notice-free"><span>🎉</span><span>Free delivery on orders Rs. {FREE_DELIVERY_THRESHOLD.toLocaleString()}+!</span></div>
                 ) : !location.lat ? (
@@ -392,7 +434,6 @@ export default function Cart() {
                   <div className="notice notice-has"><span>🚚</span><span>{location.distKm?.toFixed(1)} km · {deliveryFee === 0 ? 'Free delivery! 🎉' : `Rs. ${deliveryFee.toLocaleString()} delivery fee`}</span></div>
                 ) : null}
 
-                {/* Totals */}
                 <div className="totals">
                   <div className="trow"><span>Subtotal</span><span style={{ fontWeight:700 }}>Rs. {total.toLocaleString()}</span></div>
                   <div className="trow">
@@ -457,7 +498,6 @@ export default function Cart() {
                 <input name="note" value={form.note} onChange={handleChange} placeholder="Any special requests..." />
               </div>
 
-              {/* Payment Method Toggle */}
               <div style={{ marginBottom:6 }}>
                 <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#444', marginBottom:10 }}>Payment Method *</label>
                 <div className="pm-toggle">
@@ -474,9 +514,25 @@ export default function Cart() {
                 </div>
               </div>
 
-          
+              {paymentMethod === 'cod' ? (
+                <div className="wa-box">
+                  <span style={{ fontSize:20 }}>💬</span>
+                  Your order will open WhatsApp — just tap Send to confirm!
+                </div>
+              ) : (
+                <>
+                  {isLocalhost ? (
+                    <div className="localhost-badge">⚠️ PayHere only works on deployed site, not localhost</div>
+                  ) : PAYHERE_MODE === 'sandbox' ? (
+                    <div className="sandbox-badge">🧪 Sandbox mode — use PayHere test cards only</div>
+                  ) : null}
+                  <div className="card-box">
+                    <span style={{ fontSize:20, flexShrink:0 }}>🔒</span>
+                    <span>You'll be redirected to PayHere's secure payment page. Your card details are never stored on our site.</span>
+                  </div>
+                </>
+              )}
 
-              {/* Order button */}
               <button
                 className="order-btn"
                 onClick={handleOrder}
