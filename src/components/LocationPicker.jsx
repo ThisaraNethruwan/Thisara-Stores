@@ -424,26 +424,8 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
             <span>Tap map or drag pin to change</span>
           </div>
 
-          {/* Pin info */}
-          {pinInfo && (
-            <div
-              className="lp-pin-info"
-              style={{ background: pinInfo.fee === 0 ? '#d8f3dc' : '#f0faf3', border:`1.5px solid ${pinInfo.fee === 0 ? '#86efac' : '#d8f3dc'}` }}
-            >
-              <div style={{ fontWeight:700, color:'#1e6641', marginBottom:8, fontSize:13, wordBreak:'break-word', display:'flex', gap:6, alignItems:'flex-start' }}>
-                <span style={{ flexShrink:0 }}>📍</span>
-                <span>{address}</span>
-              </div>
-              <div style={{ display:'flex', gap:16, flexWrap:'wrap', color:'#555', fontSize:12 }}>
-                <span>📏 <strong>{pinInfo.distKm.toFixed(1)} km</strong> from shop</span>
-                <span>🚚 Delivery fee:{' '}
-                  <strong style={{ color: pinInfo.fee === 0 ? '#1e6641' : '#b45309' }}>
-                    {pinInfo.fee === 0 ? '🎉 FREE' : `Rs. ${pinInfo.fee.toLocaleString()}`}
-                  </strong>
-                </span>
-              </div>
-            </div>
-          )}
+       
+         
         </div>
       )}
     </div>
