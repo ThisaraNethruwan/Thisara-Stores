@@ -9,12 +9,9 @@
     <meta property="og:title" content="Thisara Stores – Fresh Groceries | Ragama" />
     <meta property="og:description" content="Fresh groceries delivered to your door across Ragama, Kandana, Ja-Ela and surrounding areas." />
     <title>Thisara Stores | Ragama</title>
-    <!-- Preconnect for speed -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Fonts: display=swap for fast text render -->
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <!-- Critical inline style to avoid FOUC -->
     <style>
       body { margin:0; background:#fffbf0; font-family:'Nunito',sans-serif; }
       #root { min-height:100vh; }
@@ -22,49 +19,7 @@
   </head>
   <body>
     <div id="root"></div>
-
-    <!-- PayHere SDK loader -->
-    <script>
-      window.payhereReady = false;
-
-      function loadPayhere() {
-        return new Promise((resolve, reject) => {
-          // Already loaded
-          if (window.payhere) {
-            window.payhereReady = true;
-            resolve();
-            return;
-          }
-
-          // Read mode injected by Vite at build time via index.html env replacement
-          // Falls back to sandbox for safety
-          var mode = '%VITE_PAYHERE_MODE%';
-          var isLive = mode === 'live';
-          var src = isLive
-            ? 'https://www.payhere.lk/pay/js/payhere.js'
-            : 'https://sandbox.payhere.lk/pay/js/payhere.js';
-
-          var script = document.createElement('script');
-          script.src = src;
-          script.async = true;
-
-          script.onload = function () {
-            window.payhereReady = true;
-            resolve();
-          };
-
-          script.onerror = function () {
-            reject(new Error('PayHere SDK failed to load. Check your internet connection.'));
-          };
-
-          document.body.appendChild(script);
-        });
-      }
-
-      // Load immediately and expose the promise globally so Cart.jsx can await it
-      window.payhereLoadPromise = loadPayhere();
-    </script>
-
+    <!-- PayHere SDK is loaded dynamically by Cart.jsx — no script tag needed here -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
