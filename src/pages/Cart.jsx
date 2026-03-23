@@ -16,15 +16,13 @@ const EMOJI = {
 const PAYHERE_MERCHANT_ID = import.meta.env.VITE_PAYHERE_MERCHANT_ID || ''
 const PAYHERE_MODE        = import.meta.env.VITE_PAYHERE_MODE || 'sandbox'
 
-// ─── Load PayHere SDK dynamically (reads env at runtime, works on Vercel) ───
+// ─── Load PayHere SDK dynamically ────────────────────────────────────────────
 let payhereLoadPromise = null
 
 function loadPayHereSDK() {
-  // Return cached promise if already loading/loaded
   if (payhereLoadPromise) return payhereLoadPromise
 
   payhereLoadPromise = new Promise((resolve, reject) => {
-    // Already loaded
     if (window.payhere) {
       resolve()
       return
@@ -43,7 +41,7 @@ function loadPayHereSDK() {
       resolve()
     }
     script.onerror = () => {
-      payhereLoadPromise = null // reset so it can retry
+      payhereLoadPromise = null
       reject(new Error(`PayHere SDK failed to load from ${src}`))
     }
 
@@ -53,7 +51,7 @@ function loadPayHereSDK() {
   return payhereLoadPromise
 }
 
-// ─── WhatsApp message builder ────────────────────────────────────────────────
+// ─── WhatsApp message builder ─────────────────────────────────────────────────
 function buildWhatsAppMessage(order) {
   const {
     customerName, customerPhone, deliveryAddress,
@@ -119,9 +117,9 @@ function openWhatsAppWindow(message) {
   }
 }
 
-// ─── PayHere launcher ────────────────────────────────────────────────────────
+// ─── PayHere launcher (with race-condition fix) ───────────────────────────────
 async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
-  // Load the SDK first (cached after first call)
+  // 1. Load the SDK script
   try {
     await loadPayHereSDK()
   } catch (err) {
@@ -133,14 +131,26 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
     }
   }
 
+  // 2. ✅ FIX: Poll for window.payhere up to 3 seconds (race condition between
+  //    script onload and the SDK actually assigning window.payhere)
+  const maxWaitMs  = 3000
+  const intervalMs = 100
+  let waited = 0
+  while (!window.payhere && waited < maxWaitMs) {
+    await new Promise(r => setTimeout(r, intervalMs))
+    waited += intervalMs
+  }
+
   if (!window.payhere) {
+    console.error('[PayHere] window.payhere still undefined after waiting', maxWaitMs, 'ms')
     return {
       success: false,
       reason: 'error',
-      message: 'PayHere SDK unavailable. Please refresh and try again.',
+      message: 'PayHere SDK unavailable. Please refresh the page and try again.',
     }
   }
 
+  // 3. Launch payment
   return new Promise((resolve) => {
     window.payhere.startPayment({
       sandbox:     PAYHERE_MODE !== 'live',
@@ -177,7 +187,11 @@ export default function Cart() {
   const [submitting, setSubmitting] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('cod')
 
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  // ✅ FIX: Reliable localhost detection — avoids false positives on Vercel preview URLs
+  const isLocalhost = useMemo(() => {
+    const host = window.location.hostname
+    return host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0'
+  }, [])
 
   // Preload the PayHere SDK as soon as user switches to card payment
   useEffect(() => {
@@ -266,6 +280,7 @@ export default function Cart() {
       return
     }
 
+    // ✅ FIX: Only block on actual localhost, not deployed preview URLs
     if (isLocalhost) {
       toast.error('PayHere does not work on localhost. Deploy to Vercel and test there.', { duration: 5000 })
       return
