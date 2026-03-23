@@ -82,13 +82,30 @@ function openWhatsAppWindow(message) {
   }
 }
 
-// PayHere launcher — returns Promise resolving to { success, reason?, message? }
-function launchPayHere({ orderId, amount, customerName, customerPhone }) {
-  return new Promise((resolve) => {
-    if (typeof window.payhere === 'undefined') {
-      resolve({ success: false, reason: 'error', message: 'PayHere SDK not loaded. Check your internet connection and try again.' })
-      return
+// PayHere launcher — waits for SDK then starts payment
+// Returns Promise resolving to { success, reason?, message? }
+async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
+  // Wait for the SDK to be fully loaded (set up in index.html)
+  try {
+    await window.payhereLoadPromise
+  } catch (err) {
+    return {
+      success: false,
+      reason: 'error',
+      message: 'PayHere SDK failed to load. Check your internet connection and try again.',
     }
+  }
+
+  // Double-check window.payhere exists after load
+  if (!window.payhere) {
+    return {
+      success: false,
+      reason: 'error',
+      message: 'PayHere SDK not available. This may not work on localhost — please test on the deployed site.',
+    }
+  }
+
+  return new Promise((resolve) => {
     window.payhere.startPayment({
       sandbox:     PAYHERE_MODE !== 'live',
       merchant_id: PAYHERE_MERCHANT_ID,
@@ -194,11 +211,24 @@ export default function Cart() {
     setSubmitting(false)
   }
 
-  // Card flow — save to Firebase, launch PayHere, handle result
+  // Card flow — wait for PayHere SDK, save to Firebase, launch PayHere, handle result
   const handleCardOrder = async () => {
     if (!validate()) { toast.error('Please fill all required fields'); return }
-    if (!PAYHERE_MERCHANT_ID) { toast.error('PayHere not configured. Add VITE_PAYHERE_MERCHANT_ID to .env'); return }
+    if (!PAYHERE_MERCHANT_ID) {
+      toast.error('PayHere not configured. Add VITE_PAYHERE_MERCHANT_ID to your Vercel environment variables.')
+      return
+    }
+
     setSubmitting(true)
+
+    // Show helpful message if on localhost
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    if (isLocalhost) {
+      toast.error('PayHere does not work on localhost. Please deploy to Vercel and test there.', { duration: 5000 })
+      setSubmitting(false)
+      return
+    }
+
     const resolvedFee   = deliveryFee ?? 0
     const resolvedTotal = total + resolvedFee
     const tempOrderId   = `TS${Math.floor(Math.random() * 90000) + 10000}`
@@ -296,6 +326,7 @@ export default function Cart() {
         .wa-box { background:#f0fff4; border:1.5px solid #86efac; border-radius:12px; padding:11px 14px; font-size:13px; color:#166534; font-weight:600; margin-bottom:18px; display:flex; gap:8px; align-items:center; }
         .card-box { background:#eff6ff; border:1.5px solid #93c5fd; border-radius:12px; padding:11px 14px; font-size:13px; color:#1e40af; font-weight:600; margin-bottom:18px; display:flex; gap:8px; align-items:flex-start; line-height:1.6; }
         .sandbox-badge { display:inline-flex; align-items:center; gap:5px; background:#fff9ec; border:1.5px solid #fde68a; color:#92400e; padding:5px 12px; border-radius:50px; font-size:11px; font-weight:700; margin-bottom:10px; }
+        .localhost-badge { display:inline-flex; align-items:center; gap:5px; background:#fef2f2; border:1.5px solid #fca5a5; color:#991b1b; padding:5px 12px; border-radius:50px; font-size:11px; font-weight:700; margin-bottom:10px; }
         .order-btn { width:100%; padding:16px; border-radius:12px; font-weight:800; font-size:16px; border:none; cursor:pointer; margin-bottom:10px; font-family:'Nunito',sans-serif; transition:all .2s; }
         .order-btn:not(:disabled):hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(37,211,102,.35); }
         .order-btn:disabled { background:#ccc!important; cursor:not-allowed; }
@@ -443,23 +474,7 @@ export default function Cart() {
                 </div>
               </div>
 
-              {/* Info box */}
-              {paymentMethod === 'cod' ? (
-                <div className="wa-box">
-                  <span style={{ fontSize:20 }}>💬</span>
-                  Your order will open WhatsApp — just tap Send to confirm!
-                </div>
-              ) : (
-                <>
-                  {PAYHERE_MODE === 'sandbox' && (
-                    <div className="sandbox-badge">🧪 Sandbox mode — use PayHere test cards only</div>
-                  )}
-                  <div className="card-box">
-                    <span style={{ fontSize:20, flexShrink:0 }}>🔒</span>
-                    <span>You'll be redirected to PayHere's secure payment page. Your card details are never stored on our site.</span>
-                  </div>
-                </>
-              )}
+          
 
               {/* Order button */}
               <button
