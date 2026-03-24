@@ -16,37 +16,61 @@ const EMOJI = {
 const PAYHERE_MERCHANT_ID = import.meta.env.VITE_PAYHERE_MERCHANT_ID || ''
 const PAYHERE_MODE        = import.meta.env.VITE_PAYHERE_MODE || 'sandbox'
 
-// ─── Load PayHere SDK dynamically ────────────────────────────────────────────
+// ─── Load PayHere SDK dynamically (with retry) ───────────────────────────────
 let payhereLoadPromise = null
 
-function loadPayHereSDK() {
-  if (payhereLoadPromise) return payhereLoadPromise
-
-  payhereLoadPromise = new Promise((resolve, reject) => {
-    if (window.payhere) {
-      resolve()
-      return
-    }
-
-    const src = PAYHERE_MODE === 'live'
-      ? 'https://www.payhere.lk/pay/js/payhere.js'
-      : 'https://sandbox.payhere.lk/pay/js/payhere.js'
+function injectPayHereScript(src) {
+  return new Promise((resolve, reject) => {
+    // Remove any old failed script tag before retrying
+    const old = document.querySelector(`script[src="${src}"]`)
+    if (old) old.remove()
 
     const script = document.createElement('script')
     script.src   = src
     script.async = true
 
-    script.onload = () => {
-      console.log('[PayHere] SDK loaded from:', src)
-      resolve()
-    }
-    script.onerror = () => {
-      payhereLoadPromise = null
-      reject(new Error(`PayHere SDK failed to load from ${src}`))
-    }
+    script.onload  = () => resolve()
+    script.onerror = () => reject(new Error(`PayHere script failed: ${src}`))
 
     document.body.appendChild(script)
   })
+}
+
+function loadPayHereSDK() {
+  if (payhereLoadPromise) return payhereLoadPromise
+
+  payhereLoadPromise = (async () => {
+    if (window.payhere) return
+
+    const src = PAYHERE_MODE === 'live'
+      ? 'https://www.payhere.lk/pay/js/payhere.js'
+      : 'https://sandbox.payhere.lk/pay/js/payhere.js'
+
+    // First attempt
+    try {
+      await injectPayHereScript(src)
+      console.log('[PayHere] SDK loaded:', src)
+      return
+    } catch (e) {
+      console.warn('[PayHere] First load attempt failed, retrying in 2s…', e)
+    }
+
+    // Wait 2 seconds then retry once
+    await new Promise(r => setTimeout(r, 2000))
+    payhereLoadPromise = null // reset so injectPayHereScript can re-add the tag
+
+    try {
+      await injectPayHereScript(src)
+      console.log('[PayHere] SDK loaded on retry:', src)
+    } catch (e) {
+      payhereLoadPromise = null
+      throw new Error(
+        'PayHere payment page could not be loaded. ' +
+        'This may be a temporary issue with PayHere\'s servers. ' +
+        'Please try again in a moment, or choose Cash on Delivery.'
+      )
+    }
+  })()
 
   return payhereLoadPromise
 }
@@ -127,7 +151,7 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
     return {
       success: false,
       reason: 'error',
-      message: 'PayHere SDK failed to load. Please check your internet connection and try again.',
+      message: err.message || 'PayHere could not be reached. Please try again or use Cash on Delivery.',
     }
   }
 
