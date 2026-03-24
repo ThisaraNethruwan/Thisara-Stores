@@ -17,37 +17,89 @@ const PAYHERE_MERCHANT_ID = import.meta.env.VITE_PAYHERE_MERCHANT_ID || ''
 const PAYHERE_MODE        = import.meta.env.VITE_PAYHERE_MODE || 'sandbox'
 
 // ─── Load PayHere SDK ─────────────────────────────────────────────────────────
-// Load immediately when this module is imported (not on button click)
-// so there's maximum time for the sandbox server to respond.
+// Loaded on-demand with retry when the user actually clicks Pay,
+// so a slow/unreliable sandbox server doesn't block the whole page.
 
-const PAYHERE_SDK_SRC = PAYHERE_MODE === 'live'
-  ? 'https://www.payhere.lk/pay/js/payhere.js'
-  : 'https://sandbox.payhere.lk/pay/js/payhere.js'
+// Single SDK URL for both sandbox and live — sandbox mode is set via the 'sandbox' parameter
+// The old sandbox.payhere.lk URL is discontinued (returns 404)
+const PAYHERE_SDK_SRC = 'https://www.payhere.lk/lib/payhere.js'
 
-let sdkReady = false
-let sdkFailed = false
+// Remove any stale failed script tag so we can retry cleanly
+function removeSdkScript() {
+  const old = document.querySelector(`script[src="${PAYHERE_SDK_SRC}"]`)
+  if (old) old.remove()
+  // Also clear window.payhere in case it's a stale incomplete object
+}
 
-// Inject the script immediately
-;(function preloadSDK() {
-  if (typeof window === 'undefined') return
-  if (document.querySelector(`script[src="${PAYHERE_SDK_SRC}"]`)) return
-
-  const script = document.createElement('script')
-  script.src = PAYHERE_SDK_SRC
-  script.async = true
-  script.onload  = () => { sdkReady = true; console.log('[PayHere] SDK ready') }
-  script.onerror = () => { sdkFailed = true; console.warn('[PayHere] SDK script failed to load') }
-  document.head.appendChild(script)
-})()
-
-// Wait for window.payhere to be available (polls up to 15 seconds)
-function waitForPayHere(maxMs = 15000) {
+// Load (or reload) the SDK script fresh — returns a Promise
+function loadSdkScript(timeoutMs = 20000) {
   return new Promise((resolve, reject) => {
-    if (window.payhere) { resolve(); return }
+    // Already loaded successfully
+    if (window.payhere && typeof window.payhere.startPayment === 'function') {
+      resolve(); return
+    }
+
+    // Remove any previous broken/timed-out script tag
+    removeSdkScript()
+
+    const script = document.createElement('script')
+    script.src = PAYHERE_SDK_SRC
+    script.async = true
+
+    const timer = setTimeout(() => {
+      script.remove()
+      reject(new Error('SDK load timed out'))
+    }, timeoutMs)
+
+    script.onload = () => {
+      clearTimeout(timer)
+      // Poll briefly for window.payhere to be initialised
+      let attempts = 0
+      const check = setInterval(() => {
+        if (window.payhere && typeof window.payhere.startPayment === 'function') {
+          clearInterval(check)
+          console.log('[PayHere] SDK ready ✅')
+          resolve()
+        } else if (++attempts > 30) {
+          clearInterval(check)
+          reject(new Error('PayHere SDK loaded but window.payhere not initialised'))
+        }
+      }, 200)
+    }
+
+    script.onerror = () => {
+      clearTimeout(timer)
+      script.remove()
+      reject(new Error('SDK script failed to load'))
+    }
+
+    document.head.appendChild(script)
+  })
+}
+
+// Load with up to 2 retries
+async function loadSdkWithRetry(retries = 2) {
+  for (let attempt = 1; attempt <= retries + 1; attempt++) {
+    try {
+      console.log(`[PayHere] Loading SDK (attempt ${attempt})...`)
+      await loadSdkScript(20000)
+      return // success
+    } catch (err) {
+      console.warn(`[PayHere] Attempt ${attempt} failed:`, err.message)
+      if (attempt > retries) throw err
+      await new Promise(r => setTimeout(r, 2000)) // wait 2s before retry
+    }
+  }
+}
+
+// Legacy wait function (kept for compatibility, now just delegates)
+function waitForPayHere(maxMs = 20000) {
+  return new Promise((resolve, reject) => {
+    if (window.payhere && typeof window.payhere.startPayment === 'function') { resolve(); return }
 
     const start = Date.now()
     const interval = setInterval(() => {
-      if (window.payhere) {
+      if (window.payhere && typeof window.payhere.startPayment === 'function') {
         clearInterval(interval)
         resolve()
         return
@@ -132,15 +184,17 @@ function openWhatsAppWindow(message) {
 
 // ─── PayHere launcher ────────────────────────────────────────────────────────
 async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
-  // 1. Wait for the SDK (already injected at module load, just need window.payhere)
+  // 1. Load SDK fresh with retry (handles unreliable sandbox server)
   try {
-    await waitForPayHere(15000)
+    await loadSdkWithRetry(2)
   } catch (err) {
-    console.error('[PayHere] SDK not available:', err)
+    console.error('[PayHere] SDK failed after retries:', err)
     return {
       success: false,
       reason: 'error',
-      message: err.message,
+      message:
+        'PayHere could not be reached. This is usually a temporary issue with PayHere's servers. ' +
+        'Please wait 30 seconds and try again, or choose Cash on Delivery.',
     }
   }
 
@@ -171,13 +225,17 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
   }
 
   // 3. Launch payment
+  // notify_url: PayHere POSTs the payment result here server-side.
+  // Using the live domain for sandbox too (PayHere requires a public HTTPS URL).
+  const notifyUrl = 'https://thisara.store/api/payhere-notify'
+
   return new Promise((resolve) => {
     window.payhere.startPayment({
       sandbox:     PAYHERE_MODE !== 'live',
       merchant_id: PAYHERE_MERCHANT_ID,
       return_url:  `${window.location.origin}/order-success`,
       cancel_url:  `${window.location.origin}/cart`,
-      notify_url:  '',
+      notify_url:  notifyUrl,
       order_id:    orderId,
       items:       `${SHOP_NAME} Order #${orderId}`,
       amount:      Number(amount).toFixed(2),
@@ -302,6 +360,9 @@ export default function Cart() {
 
     setSubmitting(true)
 
+    // Show a loading toast while SDK loads (can take a few seconds on sandbox)
+    const loadingToast = toast.loading('⏳ Connecting to PayHere...', { duration: 60000 })
+
     const resolvedFee   = deliveryFee ?? 0
     const resolvedTotal = total + resolvedFee
     const tempOrderId   = `TS${Math.floor(Math.random() * 90000) + 10000}`
@@ -317,6 +378,8 @@ export default function Cart() {
       customerPhone: form.phone.replace(/\s/g, ''),
     })
 
+    toast.dismiss(loadingToast)
+
     if (result.success) {
       const message = buildWhatsAppMessage({ ...orderData, orderId: tempOrderId, paymentStatus: 'paid' })
       clearCart()
@@ -327,7 +390,7 @@ export default function Cart() {
       toast.error('Payment cancelled. Your cart is still saved.')
       setSubmitting(false)
     } else {
-      toast.error(`Payment failed: ${result.message || 'Please try again.'}`)
+      toast.error(result.message || 'Payment failed. Please try again.', { duration: 6000 })
       setSubmitting(false)
     }
   }
