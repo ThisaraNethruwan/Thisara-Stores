@@ -12,87 +12,129 @@ const EMOJI = {
   'Household & Cleaning':'🧴','Personal Care':'🧼',
 }
 
-// PayHere config — reads from .env / Vercel environment variables
+// PayHere config — reads from Vite env vars
 const PAYHERE_MERCHANT_ID = import.meta.env.VITE_PAYHERE_MERCHANT_ID || ''
 const PAYHERE_MODE        = import.meta.env.VITE_PAYHERE_MODE || 'sandbox'
 
-// ─── Load PayHere SDK ─────────────────────────────────────────────────────────
-// Loaded on-demand with retry when the user actually clicks Pay,
-// so a slow/unreliable sandbox server doesn't block the whole page.
+// ─── PayHere SDK loader ───────────────────────────────────────────────────────
+// Official SDK URL (same for sandbox and live — mode set via "sandbox" param)
+const PAYHERE_SDK_URL = 'https://www.payhere.lk/lib/payhere.js'
 
-// Single SDK URL for both sandbox and live — sandbox mode is set via the 'sandbox' parameter
-// The old sandbox.payhere.lk URL is discontinued (returns 404)
-const PAYHERE_SDK_SRC = 'https://www.payhere.lk/lib/payhere.js'
-
-// Remove any stale failed script tag so we can retry cleanly
-function removeSdkScript() {
-  const old = document.querySelector(`script[src="${PAYHERE_SDK_SRC}"]`)
-  if (old) old.remove()
-  // Also clear window.payhere in case it's a stale incomplete object
-}
-
-// Load (or reload) the SDK script fresh — returns a Promise
-function loadSdkScript(timeoutMs = 20000) {
+function loadPayHereSDK() {
   return new Promise((resolve, reject) => {
-    // Already loaded successfully
+    // Already loaded
     if (window.payhere && typeof window.payhere.startPayment === 'function') {
       resolve(); return
     }
-
-    // Remove any previous broken/timed-out script tag
-    removeSdkScript()
+    // Remove any broken previous script tag
+    const old = document.querySelector(`script[src="${PAYHERE_SDK_URL}"]`)
+    if (old) old.remove()
 
     const script = document.createElement('script')
-    script.src = PAYHERE_SDK_SRC
-    script.async = true
+    script.src  = PAYHERE_SDK_URL
+    script.type = 'text/javascript'
 
-    const timer = setTimeout(() => {
+    const timeout = setTimeout(() => {
       script.remove()
-      reject(new Error('SDK load timed out'))
-    }, timeoutMs)
+      reject(new Error('PayHere SDK load timed out after 20s'))
+    }, 20000)
 
     script.onload = () => {
-      clearTimeout(timer)
-      // Poll briefly for window.payhere to be initialised
-      let attempts = 0
-      const check = setInterval(() => {
+      clearTimeout(timeout)
+      // Small delay to allow SDK to initialise
+      setTimeout(() => {
         if (window.payhere && typeof window.payhere.startPayment === 'function') {
-          clearInterval(check)
-          console.log('[PayHere] SDK ready ✅')
           resolve()
-        } else if (++attempts > 30) {
-          clearInterval(check)
-          reject(new Error('PayHere SDK loaded but window.payhere not initialised'))
+        } else {
+          reject(new Error('PayHere SDK loaded but did not initialise'))
         }
-      }, 200)
+      }, 500)
     }
-
     script.onerror = () => {
-      clearTimeout(timer)
+      clearTimeout(timeout)
       script.remove()
-      reject(new Error('SDK script failed to load'))
+      reject(new Error('Failed to load PayHere SDK script'))
     }
-
     document.head.appendChild(script)
   })
 }
 
-// Load with up to 2 retries
-async function loadSdkWithRetry(retries = 2) {
-  for (let attempt = 1; attempt <= retries + 1; attempt++) {
-    try {
-      console.log(`[PayHere] Loading SDK (attempt ${attempt})...`)
-      await loadSdkScript(20000)
-      return // success
-    } catch (err) {
-      console.warn(`[PayHere] Attempt ${attempt} failed:`, err.message)
-      if (attempt > retries) throw err
-      await new Promise(r => setTimeout(r, 2000)) // wait 2s before retry
-    }
+// ─── PayHere launcher (follows official JS SDK docs exactly) ─────────────────
+async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
+  // Step 1: Load SDK
+  try {
+    await loadPayHereSDK()
+  } catch (err) {
+    console.error('[PayHere] SDK load failed:', err.message)
+    return { success: false, reason: 'error', message: err.message }
   }
-}
 
-// (waitForPayHere removed — replaced by loadSdkWithRetry above)
+  // Step 2: Get hash from server
+  let hash
+  try {
+    const res = await fetch('/api/payhere-hash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        merchant_id: PAYHERE_MERCHANT_ID,
+        order_id:    String(orderId),
+        amount:      Number(amount).toFixed(2),
+        currency:    'LKR',
+      }),
+    })
+    if (!res.ok) {
+      const errBody = await res.text()
+      throw new Error(`Hash API error ${res.status}: ${errBody}`)
+    }
+    const data = await res.json()
+    if (!data.hash) throw new Error('Hash missing in server response')
+    hash = data.hash
+    console.log('[PayHere] Hash received from server ✅')
+  } catch (err) {
+    console.error('[PayHere] Hash fetch failed:', err.message)
+    return { success: false, reason: 'error', message: 'Payment setup failed — please try again.' }
+  }
+
+  // Step 3: Launch payment (official PayHere JS SDK pattern)
+  return new Promise((resolve) => {
+    // Set callbacks as properties on payhere object (official pattern per docs)
+    window.payhere.onCompleted = function(payHereOrderId) {
+      console.log('[PayHere] Payment completed:', payHereOrderId)
+      resolve({ success: true, orderId: payHereOrderId })
+    }
+    window.payhere.onDismissed = function() {
+      console.log('[PayHere] Payment dismissed')
+      resolve({ success: false, reason: 'dismissed' })
+    }
+    window.payhere.onError = function(error) {
+      console.error('[PayHere] Payment error:', error)
+      resolve({ success: false, reason: 'error', message: String(error) })
+    }
+
+    const payment = {
+      sandbox:     PAYHERE_MODE !== 'live',
+      merchant_id: String(PAYHERE_MERCHANT_ID),
+      return_url:  undefined,   // Not needed for JS SDK popup (uses onCompleted)
+      cancel_url:  undefined,   // Not needed for JS SDK popup (uses onDismissed)
+      notify_url:  'https://thisara.store/api/payhere-notify',
+      order_id:    String(orderId),
+      items:       `Thisara Stores Order #${orderId}`,
+      amount:      Number(amount).toFixed(2),
+      currency:    'LKR',
+      hash,
+      first_name:  customerName.split(' ')[0] || customerName,
+      last_name:   customerName.split(' ').slice(1).join(' ') || '.',
+      email:       'customer@thisarastores.com',
+      phone:       String(customerPhone),
+      address:     'Sri Lanka',
+      city:        'Ragama',
+      country:     'Sri Lanka',
+    }
+
+    console.log('[PayHere] Launching payment popup...')
+    window.payhere.startPayment(payment)
+  })
+}
 
 // ─── WhatsApp message builder ─────────────────────────────────────────────────
 function buildWhatsAppMessage(order) {
@@ -160,76 +202,7 @@ function openWhatsAppWindow(message) {
   }
 }
 
-// ─── PayHere launcher ────────────────────────────────────────────────────────
-async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
-  // 1. Load SDK fresh with retry (handles unreliable sandbox server)
-  try {
-    await loadSdkWithRetry(2)
-  } catch (err) {
-    console.error('[PayHere] SDK failed after retries:', err)
-    return {
-      success: false,
-      reason: 'error',
-      message:
-        'PayHere could not be reached. This is usually a temporary issue with PayHere's servers. ' +
-        'Please wait 30 seconds and try again, or choose Cash on Delivery.',
-    }
-  }
 
-  // 2. Fetch the payment hash from our secure serverless function
-  let hash = ''
-  try {
-    const res = await fetch('/api/payhere-hash', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        merchant_id: PAYHERE_MERCHANT_ID,
-        order_id:    orderId,
-        amount:      Number(amount).toFixed(2),
-        currency:    'LKR',
-      }),
-    })
-    if (!res.ok) throw new Error(`Hash API returned ${res.status}`)
-    const data = await res.json()
-    if (!data.hash) throw new Error('Hash missing in API response')
-    hash = data.hash
-  } catch (err) {
-    console.error('[PayHere] Hash generation failed:', err)
-    return {
-      success: false,
-      reason: 'error',
-      message: 'Payment setup failed. Please try again or use Cash on Delivery.',
-    }
-  }
-
-  // 3. Launch payment using official PayHere callback style
-  // Callbacks must be set as properties on window.payhere (not inline in payment object)
-  return new Promise((resolve) => {
-    window.payhere.onCompleted = (ordId) => resolve({ success: true, orderId: ordId })
-    window.payhere.onDismissed = () => resolve({ success: false, reason: 'dismissed' })
-    window.payhere.onError     = (error) => resolve({ success: false, reason: 'error', message: String(error) })
-
-    window.payhere.startPayment({
-      sandbox:     PAYHERE_MODE !== 'live',
-      merchant_id: PAYHERE_MERCHANT_ID,
-      return_url:  `${window.location.origin}/order-success`,
-      cancel_url:  `${window.location.origin}/cart`,
-      notify_url:  'https://thisara.store/api/payhere-notify',
-      order_id:    orderId,
-      items:       `${SHOP_NAME} Order #${orderId}`,
-      amount:      Number(amount).toFixed(2),
-      currency:    'LKR',
-      hash,
-      first_name:  customerName.split(' ')[0] || customerName,
-      last_name:   customerName.split(' ').slice(1).join(' ') || '.',
-      email:       'customer@thisarastores.com',
-      phone:       customerPhone,
-      address:     'Sri Lanka',
-      city:        'Ragama',
-      country:     'Sri Lanka',
-    })
-  })
-}
 
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function Cart() {
