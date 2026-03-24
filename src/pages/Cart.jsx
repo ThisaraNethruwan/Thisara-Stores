@@ -353,23 +353,21 @@ export default function Cart() {
               </div>
               {paymentMethod === 'cod' ? (
                 <div className="info-box info-green">
-                  <span style={{ fontSize:20 }}>✅</span>
                   <span>Your order will be confirmed instantly. We'll call you to arrange delivery!</span>
                 </div>
               ) : (
                 <>
                   {PAYHERE_MODE === 'sandbox' && !isLocalhost && <div className="sandbox-badge">🧪 Sandbox — use PayHere test cards only</div>}
                   <div className="info-box info-blue">
-                    <span style={{ fontSize:20, flexShrink:0 }}>🔒</span>
                     <span>Secure payment via PayHere. Order confirmed automatically after payment.</span>
                   </div>
                 </>
               )}
               <button className="order-btn" onClick={handleOrder} disabled={submitting} style={{ background: submitting ? '#ccc' : paymentMethod === 'card' ? '#1d4ed8' : '#086129', color:'#fff' }}>
-                {submitting ? '⏳ Processing...' : paymentMethod === 'card' ? `💳 Pay Now — Rs. ${grandTotal.toLocaleString()}` : `✅ Place Order — Rs. ${grandTotal.toLocaleString()}`}
+                {submitting ? ' Processing...' : paymentMethod === 'card' ? `Pay Now — Rs. ${grandTotal.toLocaleString()}` : ` Place Order — Rs. ${grandTotal.toLocaleString()}`}
               </button>
               <p style={{ fontSize:12, color:'#999', textAlign:'center', lineHeight:1.6 }}>
-                {paymentMethod === 'card' ? 'Secure payment powered by PayHere 🔒' : "We'll contact you to confirm your delivery 📞"}
+                {paymentMethod === 'card' ? 'Secure payment powered by PayHere ' : "We'll contact you to confirm your delivery "}
               </p>
             </div>
           </div>
