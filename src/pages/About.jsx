@@ -19,7 +19,7 @@ const CONTACT_INFO = [
   { icon:'📍', title:'Location',          text: SHOP_ADDRESS,                              isPhone: false },
   { icon:'📞', title:'Phone & WhatsApp',  text: OWNER_PHONE,                               isPhone: true  },
   { icon:'🕐', title:'Opening Hours',     text: SHOP_HOURS,                                isPhone: false },
-  { icon:'🚚', title:'Delivery Area',     text: 'Ragama, Kandana, Ja-Ela, Wattala & nearby', isPhone: false },
+  { icon:'🚚', title:'Delivery Area',     text: 'Ragama, Kandana, Wattala & nearby', isPhone: false },
 ]
 
 export default function About() {
