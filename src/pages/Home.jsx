@@ -369,7 +369,7 @@ export default function Home() {
               </p>
               <div className="h-hero-btns fade-up-4">
                 <Link to="/shop" className="h-btn-white">🛒 Shop Now →</Link>
-                <a href="tel:0778779453" className="h-btn-ghost">📞 Call Us</a>
+                <a href="tel:0707779453" className="h-btn-ghost">📞 Call Us</a>
               </div>
               <div className="h-trust fade-up-4">
                 {[['100+','Products'],['500+','Orders'],['4.2★','Rating']].map(([n,l]) => (
@@ -490,7 +490,7 @@ export default function Home() {
             <p style={{ color:'#555', fontSize:16 }}>Browse our products and get them delivered to your doorstep today.</p>
             <div className="h-cta-btns">
               <Link to="/shop" style={{ background:'#1e6641', color:'#fff', padding:'13px 30px', borderRadius:50, fontWeight:800, fontSize:15, display:'inline-block' }}>🛒 Start Shopping</Link>
-              <a href="tel:0778779453" style={{ background:'rgba(30,102,65,.1)', color:'#1e6641', padding:'13px 30px', borderRadius:50, fontWeight:700, fontSize:15, border:'2px solid #1e6641', display:'inline-block' }}>📞 Call 0778779453</a>
+              <a href="tel:0707779453" style={{ background:'rgba(30,102,65,.1)', color:'#1e6641', padding:'13px 30px', borderRadius:50, fontWeight:700, fontSize:15, border:'2px solid #1e6641', display:'inline-block' }}>📞 Call 0707779453</a>
             </div>
           </div>
         </section>
