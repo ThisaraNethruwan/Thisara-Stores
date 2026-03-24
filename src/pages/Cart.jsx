@@ -165,7 +165,7 @@ export default function Cart() {
     if (!PAYHERE_MERCHANT_ID) { toast.error('PayHere not configured.'); return }
     if (isLocalhost) { toast.error('PayHere does not work on localhost. Deploy to Vercel.', { duration: 5000 }); return }
     setSubmitting(true)
-    const loadingToast = toast.loading('⏳ Connecting to PayHere...')
+    const loadingToast = toast.loading('Connecting to PayHere...')
     const fee = deliveryFee ?? 0
     const tot = total + fee
     const id  = `TS${Math.floor(Math.random() * 90000) + 10000}`
