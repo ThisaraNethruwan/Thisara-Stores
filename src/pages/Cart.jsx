@@ -116,7 +116,7 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
       merchant_id: String(PAYHERE_MERCHANT_ID),
       return_url:  undefined,   // Not needed for JS SDK popup (uses onCompleted)
       cancel_url:  undefined,   // Not needed for JS SDK popup (uses onDismissed)
-      notify_url:  'https://thisara.store/api/payhere-notify',
+      notify_url:  undefined, // No notify endpoint — order confirmed via WhatsApp
       order_id:    String(orderId),
       items:       `Thisara Stores Order #${orderId}`,
       amount:      Number(amount).toFixed(2),
