@@ -48,7 +48,6 @@ export default function Footer() {
                 ['/shop', ' Shop'],
                 ['/cart', ' My Cart'],
                 ['/about', ' About Us'],
-                ['/admin/dashboard', ' My Account'],
               ].map(([to, label]) => (
                 <Link key={to} to={to} style={{ color:'#8aab98', fontSize:13, fontWeight:500, transition:'color .2s', textDecoration:'none' }}
                   onMouseEnter={e=>e.target.style.color='#52b788'}
