@@ -64,7 +64,7 @@ export default async function handler(req, res) {
     `━━━━━━━━━━━━━━━━━\n` +
     `<b>Items:</b>\n${esc(itemLines)}` +
     `━━━━━━━━━━━━━━━━━\n` +
-    ` Subtotal: Rs. ${Number(subtotal).toLocaleString()}\n` +
+    `Subtotal: Rs. ${Number(subtotal).toLocaleString()}\n` +
     `Delivery: Rs. ${Number(deliveryFee || 0).toLocaleString()}\n` +
     `<b>TOTAL: Rs. ${Number(totalPrice).toLocaleString()}</b>\n` +
     `${paymentLine}\n` +
