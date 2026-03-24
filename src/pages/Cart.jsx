@@ -155,8 +155,7 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
     }
   }
 
-  // 2. ✅ FIX: Poll for window.payhere up to 3 seconds (race condition between
-  //    script onload and the SDK actually assigning window.payhere)
+  // 2. Poll for window.payhere up to 3 seconds (race condition fix)
   const maxWaitMs  = 3000
   const intervalMs = 100
   let waited = 0
@@ -174,7 +173,34 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
     }
   }
 
-  // 3. Launch payment
+  // 3. Fetch the payment hash from our secure serverless function
+  //    (merchant secret never touches the browser)
+  let hash = ''
+  try {
+    const res = await fetch('/api/payhere-hash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        merchant_id: PAYHERE_MERCHANT_ID,
+        order_id:    orderId,
+        amount:      Number(amount).toFixed(2),
+        currency:    'LKR',
+      }),
+    })
+    if (!res.ok) throw new Error(`Hash API returned ${res.status}`)
+    const data = await res.json()
+    if (!data.hash) throw new Error('Hash missing in API response')
+    hash = data.hash
+  } catch (err) {
+    console.error('[PayHere] Hash generation failed:', err)
+    return {
+      success: false,
+      reason: 'error',
+      message: 'Payment setup failed. Please try again or use Cash on Delivery.',
+    }
+  }
+
+  // 4. Launch payment
   return new Promise((resolve) => {
     window.payhere.startPayment({
       sandbox:     PAYHERE_MODE !== 'live',
@@ -184,8 +210,9 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
       notify_url:  '',
       order_id:    orderId,
       items:       `${SHOP_NAME} Order #${orderId}`,
-      amount:      amount.toFixed(2),
+      amount:      Number(amount).toFixed(2),
       currency:    'LKR',
+      hash,
       first_name:  customerName.split(' ')[0] || customerName,
       last_name:   customerName.split(' ').slice(1).join(' ') || '.',
       email:       'customer@thisarastores.com',
