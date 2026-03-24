@@ -19,7 +19,6 @@ export default function PrivacyPolicy() {
       `}</style>
 
       <div className="policy-hero">
-        <div style={{ fontSize:48, marginBottom:12 }}>🔒</div>
         <h1 style={{ fontFamily:'Fraunces,serif', fontSize:'clamp(26px,5vw,40px)', fontWeight:900, color:'#fff', marginBottom:10 }}>
           Privacy Policy
         </h1>
