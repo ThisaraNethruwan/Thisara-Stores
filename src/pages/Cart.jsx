@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../components/CartContext'
-import { addOrder } from '../lib/firebase'
+import { addOrder, db } from '../lib/firebase'
+import { updateDoc, doc, serverTimestamp } from 'firebase/firestore'
 import LocationPicker from '../components/LocationPicker'
 import { SHOP_NAME, DELIVERY_RATE_PER_KM, FREE_DELIVERY_THRESHOLD } from '../utils/constants'
 import toast from 'react-hot-toast'
@@ -111,15 +112,37 @@ export default function Cart() {
     setErrors(e); return Object.keys(e).length === 0
   }
 
-  const handleChange = e => { setForm(f => ({ ...f, [e.target.name]: e.target.value })); setErrors(err => ({ ...err, [e.target.name]: undefined })) }
-  const handleLocationSelect = useCallback((loc) => { setLocation(loc); setErrors(err => ({ ...err, address: undefined })) }, [])
+  const handleChange = e => {
+    setForm(f => ({ ...f, [e.target.name]: e.target.value }))
+    setErrors(err => ({ ...err, [e.target.name]: undefined }))
+  }
+  const handleLocationSelect = useCallback((loc) => {
+    setLocation(loc)
+    setErrors(err => ({ ...err, address: undefined }))
+  }, [])
 
   const buildPayload = (fee, tot, id, paymentStatus) => ({
-    orderId: id, customerName: form.name.trim(), customerPhone: form.phone.replace(/\s/g, ''),
-    deliveryAddress: location.address, deliveryLat: location.lat, deliveryLng: location.lng,
+    orderId: id,
+    customerName: form.name.trim(),
+    customerPhone: form.phone.replace(/\s/g, ''),
+    deliveryAddress: location.address,
+    deliveryLat: location.lat,
+    deliveryLng: location.lng,
     note: form.note.trim(),
-    items: cart.map(i => ({ id: i.id, name: i.name, category: i.category, qty: i.qty, price: i.price || i.price_per_kg, isWeightBased: i.is_weight_based, weightValue: i.weight_value || null, weightLabel: i.weight_label || null, subtotal: i.subtotal })),
-    subtotal: tot - fee, deliveryFee: fee, totalPrice: tot, paymentMethod, paymentStatus, status: 'pending',
+    items: cart.map(i => ({
+      id: i.id, name: i.name, category: i.category, qty: i.qty,
+      price: i.price || i.price_per_kg,
+      isWeightBased: i.is_weight_based,
+      weightValue: i.weight_value || null,
+      weightLabel: i.weight_label || null,
+      subtotal: i.subtotal,
+    })),
+    subtotal: tot - fee,
+    deliveryFee: fee,
+    totalPrice: tot,
+    paymentMethod,
+    paymentStatus,
+    status: 'pending',
   })
 
   const handleCODOrder = async () => {
@@ -147,10 +170,27 @@ export default function Cart() {
     const tot = total + fee
     const id  = `TS${Math.floor(Math.random() * 90000) + 10000}`
     const payload = buildPayload(fee, tot, id, 'pending')
+
+    // Save order to Firestore before opening PayHere
     try { await addOrder(payload) } catch (e) { console.error('Firebase pre-save error:', e) }
-    const result = await launchPayHere({ orderId: id, amount: tot, customerName: form.name.trim(), customerPhone: form.phone.replace(/\s/g, '') })
+
+    const result = await launchPayHere({
+      orderId: id,
+      amount: tot,
+      customerName: form.name.trim(),
+      customerPhone: form.phone.replace(/\s/g, ''),
+    })
     toast.dismiss(loadingToast)
+
     if (result.success) {
+      // ✅ Update Firestore order to mark payment as paid
+      try {
+        await updateDoc(doc(db, 'orders', id), {
+          paymentStatus: 'paid',
+          updatedAt: serverTimestamp(),
+        })
+      } catch (e) { console.error('Failed to update paymentStatus:', e) }
+
       await sendTelegramNotification({ ...payload, paymentStatus: 'paid' })
       clearCart()
       toast.success('Payment successful! 🎉')
@@ -261,7 +301,9 @@ export default function Cart() {
                       <div className="ci-info">
                         <div className="ci-name">{item.name}</div>
                         <div className="ci-price">
-                          {item.is_weight_based ? `⚖️ ${item.weight_label} · Rs. ${Number(item.price_per_kg).toLocaleString()}/kg` : `Rs. ${Number(item.price).toLocaleString()}${item.unit ? ` per ${item.unit}` : ''}`}
+                          {item.is_weight_based
+                            ? `⚖️ ${item.weight_label} · Rs. ${Number(item.price_per_kg).toLocaleString()}/kg`
+                            : `Rs. ${Number(item.price).toLocaleString()}${item.unit ? ` per ${item.unit}` : ''}`}
                         </div>
                       </div>
                       <div className="ci-ctrl">
@@ -284,13 +326,18 @@ export default function Cart() {
                   <div className="notice notice-has"><span>🚚</span><span>{location.distKm?.toFixed(1)} km · {deliveryFee === 0 ? 'Free delivery! 🎉' : `Rs. ${deliveryFee.toLocaleString()} delivery fee`}</span></div>
                 ) : null}
                 <div className="totals">
-                  <div className="trow"><span>Subtotal</span><span style={{ fontWeight:700 }}>Rs. {total.toLocaleString()}</span></div>
+                  <div className="trow">
+                    <span>Subtotal</span>
+                    <span style={{ fontWeight:700 }}>Rs. {total.toLocaleString()}</span>
+                  </div>
                   <div className="trow">
                     <span>Delivery fee</span>
                     <span style={{ fontWeight:700 }}>
                       {total >= FREE_DELIVERY_THRESHOLD
                         ? <span style={{ background:'#d8f3dc', color:'#1e6641', padding:'2px 10px', borderRadius:50, fontSize:11, fontWeight:800 }}>🎉 FREE</span>
-                        : deliveryFee !== null ? `Rs. ${deliveryFee.toLocaleString()}` : <span style={{ color:'#b45309', fontSize:12 }}>📍 Pin location</span>}
+                        : deliveryFee !== null
+                          ? `Rs. ${deliveryFee.toLocaleString()}`
+                          : <span style={{ color:'#b45309', fontSize:12 }}>📍 Pin location</span>}
                     </span>
                   </div>
                   <div className="gtbox">
@@ -324,13 +371,24 @@ export default function Cart() {
               </div>
               {location.lat && deliveryFee !== null && deliveryFee > 0 && (
                 <div style={{ background:'#f0faf3', borderRadius:10, padding:'12px 14px', marginBottom:14, fontSize:13 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}><span style={{ color:'#555' }}>Items</span><span style={{ fontWeight:700 }}>Rs. {total.toLocaleString()}</span></div>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}><span style={{ color:'#555' }}>Delivery ({location.distKm?.toFixed(1)} km)</span><span style={{ fontWeight:700 }}>Rs. {deliveryFee.toLocaleString()}</span></div>
-                  <div style={{ display:'flex', justifyContent:'space-between', borderTop:'1.5px solid #d8f3dc', paddingTop:6, marginTop:4 }}><span style={{ fontWeight:800, color:'#1e6641' }}>Total</span><span style={{ fontWeight:900, color:'#1e6641', fontSize:16 }}>Rs. {grandTotal.toLocaleString()}</span></div>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                    <span style={{ color:'#555' }}>Items</span>
+                    <span style={{ fontWeight:700 }}>Rs. {total.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                    <span style={{ color:'#555' }}>Delivery ({location.distKm?.toFixed(1)} km)</span>
+                    <span style={{ fontWeight:700 }}>Rs. {deliveryFee.toLocaleString()}</span>
+                  </div>
+                  <div style={{ display:'flex', justifyContent:'space-between', borderTop:'1.5px solid #d8f3dc', paddingTop:6, marginTop:4 }}>
+                    <span style={{ fontWeight:800, color:'#1e6641' }}>Total</span>
+                    <span style={{ fontWeight:900, color:'#1e6641', fontSize:16 }}>Rs. {grandTotal.toLocaleString()}</span>
+                  </div>
                 </div>
               )}
               {total >= FREE_DELIVERY_THRESHOLD && (
-                <div style={{ background:'#d8f3dc', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#1e6641', fontWeight:700, display:'flex', gap:6, alignItems:'center' }}>🎉 Free delivery applied!</div>
+                <div style={{ background:'#d8f3dc', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#1e6641', fontWeight:700, display:'flex', gap:6, alignItems:'center' }}>
+                  🎉 Free delivery applied!
+                </div>
               )}
               <div className="ff">
                 <label>Special Note (Optional)</label>
@@ -357,17 +415,28 @@ export default function Cart() {
                 </div>
               ) : (
                 <>
-                  {PAYHERE_MODE === 'sandbox' && !isLocalhost && <div className="sandbox-badge">🧪 Sandbox — use PayHere test cards only</div>}
+                  {PAYHERE_MODE === 'sandbox' && !isLocalhost && (
+                    <div className="sandbox-badge">🧪 Sandbox — use PayHere test cards only</div>
+                  )}
                   <div className="info-box info-blue">
                     <span>Secure payment via PayHere. Order confirmed automatically after payment.</span>
                   </div>
                 </>
               )}
-              <button className="order-btn" onClick={handleOrder} disabled={submitting} style={{ background: submitting ? '#ccc' : paymentMethod === 'card' ? '#1d4ed8' : '#086129', color:'#fff' }}>
-                {submitting ? ' Processing...' : paymentMethod === 'card' ? `Pay Now — Rs. ${grandTotal.toLocaleString()}` : ` Place Order — Rs. ${grandTotal.toLocaleString()}`}
+              <button
+                className="order-btn"
+                onClick={handleOrder}
+                disabled={submitting}
+                style={{ background: submitting ? '#ccc' : paymentMethod === 'card' ? '#1d4ed8' : '#086129', color:'#fff' }}
+              >
+                {submitting
+                  ? '⏳ Processing...'
+                  : paymentMethod === 'card'
+                    ? `💳 Pay Now — Rs. ${grandTotal.toLocaleString()}`
+                    : `🛒 Place Order — Rs. ${grandTotal.toLocaleString()}`}
               </button>
               <p style={{ fontSize:12, color:'#999', textAlign:'center', lineHeight:1.6 }}>
-                {paymentMethod === 'card' ? 'Secure payment powered by PayHere ' : "We'll contact you to confirm your delivery "}
+                {paymentMethod === 'card' ? 'Secure payment powered by PayHere 🔒' : "We'll contact you to confirm your delivery 📞"}
               </p>
             </div>
           </div>
