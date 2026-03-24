@@ -1,17 +1,17 @@
-// api/payhere-hash.js — Vercel serverless function (CommonJS)
+// api/payhere-hash.js — Vercel serverless function (ES Module)
 // Generates the PayHere payment hash securely on the server.
 // The PAYHERE_MERCHANT_SECRET env var never reaches the browser.
 //
 // Hash formula (PayHere docs):
 //   MD5( merchant_id + order_id + amount + currency + MD5(merchant_secret).toUpperCase() )
 
-const crypto = require('crypto')
+import crypto from 'crypto'
 
 function md5(str) {
   return crypto.createHash('md5').update(str).digest('hex')
 }
 
-module.exports = function handler(req, res) {
+export default function handler(req, res) {
   // CORS headers so the browser fetch works
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
