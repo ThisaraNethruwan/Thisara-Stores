@@ -29,8 +29,8 @@ function loadPayHereSDK() {
     }
 
     const src = PAYHERE_MODE === 'live'
-      ? 'https://www.payhere.lk/lib/payhere.js'
-      : 'https://sandbox.payhere.lk/lib/payhere.js'
+      ? 'https://www.payhere.lk/pay/js/payhere.js'
+      : 'https://sandbox.payhere.lk/pay/js/payhere.js'
 
     const script = document.createElement('script')
     script.src   = src
