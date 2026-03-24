@@ -16,63 +16,52 @@ const EMOJI = {
 const PAYHERE_MERCHANT_ID = import.meta.env.VITE_PAYHERE_MERCHANT_ID || ''
 const PAYHERE_MODE        = import.meta.env.VITE_PAYHERE_MODE || 'sandbox'
 
-// ─── Load PayHere SDK dynamically (with retry) ───────────────────────────────
-let payhereLoadPromise = null
+// ─── Load PayHere SDK ─────────────────────────────────────────────────────────
+// Load immediately when this module is imported (not on button click)
+// so there's maximum time for the sandbox server to respond.
 
-function injectPayHereScript(src) {
+const PAYHERE_SDK_SRC = PAYHERE_MODE === 'live'
+  ? 'https://www.payhere.lk/pay/js/payhere.js'
+  : 'https://sandbox.payhere.lk/pay/js/payhere.js'
+
+let sdkReady = false
+let sdkFailed = false
+
+// Inject the script immediately
+;(function preloadSDK() {
+  if (typeof window === 'undefined') return
+  if (document.querySelector(`script[src="${PAYHERE_SDK_SRC}"]`)) return
+
+  const script = document.createElement('script')
+  script.src = PAYHERE_SDK_SRC
+  script.async = true
+  script.onload  = () => { sdkReady = true; console.log('[PayHere] SDK ready') }
+  script.onerror = () => { sdkFailed = true; console.warn('[PayHere] SDK script failed to load') }
+  document.head.appendChild(script)
+})()
+
+// Wait for window.payhere to be available (polls up to 15 seconds)
+function waitForPayHere(maxMs = 15000) {
   return new Promise((resolve, reject) => {
-    // Remove any old failed script tag before retrying
-    const old = document.querySelector(`script[src="${src}"]`)
-    if (old) old.remove()
+    if (window.payhere) { resolve(); return }
 
-    const script = document.createElement('script')
-    script.src   = src
-    script.async = true
-
-    script.onload  = () => resolve()
-    script.onerror = () => reject(new Error(`PayHere script failed: ${src}`))
-
-    document.body.appendChild(script)
+    const start = Date.now()
+    const interval = setInterval(() => {
+      if (window.payhere) {
+        clearInterval(interval)
+        resolve()
+        return
+      }
+      if (Date.now() - start > maxMs) {
+        clearInterval(interval)
+        reject(new Error(
+          'PayHere payment page could not be loaded. ' +
+          'This may be a temporary issue with PayHere\'s servers. ' +
+          'Please try again in a moment, or choose Cash on Delivery.'
+        ))
+      }
+    }, 200)
   })
-}
-
-function loadPayHereSDK() {
-  if (payhereLoadPromise) return payhereLoadPromise
-
-  payhereLoadPromise = (async () => {
-    if (window.payhere) return
-
-    const src = PAYHERE_MODE === 'live'
-      ? 'https://www.payhere.lk/pay/js/payhere.js'
-      : 'https://sandbox.payhere.lk/pay/js/payhere.js'
-
-    // First attempt
-    try {
-      await injectPayHereScript(src)
-      console.log('[PayHere] SDK loaded:', src)
-      return
-    } catch (e) {
-      console.warn('[PayHere] First load attempt failed, retrying in 2s…', e)
-    }
-
-    // Wait 2 seconds then retry once
-    await new Promise(r => setTimeout(r, 2000))
-    payhereLoadPromise = null // reset so injectPayHereScript can re-add the tag
-
-    try {
-      await injectPayHereScript(src)
-      console.log('[PayHere] SDK loaded on retry:', src)
-    } catch (e) {
-      payhereLoadPromise = null
-      throw new Error(
-        'PayHere payment page could not be loaded. ' +
-        'This may be a temporary issue with PayHere\'s servers. ' +
-        'Please try again in a moment, or choose Cash on Delivery.'
-      )
-    }
-  })()
-
-  return payhereLoadPromise
 }
 
 // ─── WhatsApp message builder ─────────────────────────────────────────────────
@@ -141,40 +130,21 @@ function openWhatsAppWindow(message) {
   }
 }
 
-// ─── PayHere launcher (with race-condition fix) ───────────────────────────────
+// ─── PayHere launcher ────────────────────────────────────────────────────────
 async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
-  // 1. Load the SDK script
+  // 1. Wait for the SDK (already injected at module load, just need window.payhere)
   try {
-    await loadPayHereSDK()
+    await waitForPayHere(15000)
   } catch (err) {
-    console.error('[PayHere] SDK load error:', err)
+    console.error('[PayHere] SDK not available:', err)
     return {
       success: false,
       reason: 'error',
-      message: err.message || 'PayHere could not be reached. Please try again or use Cash on Delivery.',
+      message: err.message,
     }
   }
 
-  // 2. Poll for window.payhere up to 3 seconds (race condition fix)
-  const maxWaitMs  = 3000
-  const intervalMs = 100
-  let waited = 0
-  while (!window.payhere && waited < maxWaitMs) {
-    await new Promise(r => setTimeout(r, intervalMs))
-    waited += intervalMs
-  }
-
-  if (!window.payhere) {
-    console.error('[PayHere] window.payhere still undefined after waiting', maxWaitMs, 'ms')
-    return {
-      success: false,
-      reason: 'error',
-      message: 'PayHere SDK unavailable. Please refresh the page and try again.',
-    }
-  }
-
-  // 3. Fetch the payment hash from our secure serverless function
-  //    (merchant secret never touches the browser)
+  // 2. Fetch the payment hash from our secure serverless function
   let hash = ''
   try {
     const res = await fetch('/api/payhere-hash', {
@@ -200,7 +170,7 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
     }
   }
 
-  // 4. Launch payment
+  // 3. Launch payment
   return new Promise((resolve) => {
     window.payhere.startPayment({
       sandbox:     PAYHERE_MODE !== 'live',
@@ -243,13 +213,6 @@ export default function Cart() {
     const host = window.location.hostname
     return host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0'
   }, [])
-
-  // Preload the PayHere SDK as soon as user switches to card payment
-  useEffect(() => {
-    if (paymentMethod === 'card' && !isLocalhost) {
-      loadPayHereSDK().catch(err => console.warn('[PayHere] Preload failed:', err))
-    }
-  }, [paymentMethod, isLocalhost])
 
   const deliveryFee = useMemo(() => {
     if (total >= FREE_DELIVERY_THRESHOLD) return 0
