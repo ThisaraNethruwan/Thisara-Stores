@@ -92,29 +92,7 @@ async function loadSdkWithRetry(retries = 2) {
   }
 }
 
-// Legacy wait function (kept for compatibility, now just delegates)
-function waitForPayHere(maxMs = 20000) {
-  return new Promise((resolve, reject) => {
-    if (window.payhere && typeof window.payhere.startPayment === 'function') { resolve(); return }
-
-    const start = Date.now()
-    const interval = setInterval(() => {
-      if (window.payhere && typeof window.payhere.startPayment === 'function') {
-        clearInterval(interval)
-        resolve()
-        return
-      }
-      if (Date.now() - start > maxMs) {
-        clearInterval(interval)
-        reject(new Error(
-          'PayHere payment page could not be loaded. ' +
-          'This may be a temporary issue with PayHere\'s servers. ' +
-          'Please try again in a moment, or choose Cash on Delivery.'
-        ))
-      }
-    }, 200)
-  })
-}
+// (waitForPayHere removed — replaced by loadSdkWithRetry above)
 
 // ─── WhatsApp message builder ─────────────────────────────────────────────────
 function buildWhatsAppMessage(order) {
@@ -224,18 +202,19 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
     }
   }
 
-  // 3. Launch payment
-  // notify_url: PayHere POSTs the payment result here server-side.
-  // Using the live domain for sandbox too (PayHere requires a public HTTPS URL).
-  const notifyUrl = 'https://thisara.store/api/payhere-notify'
-
+  // 3. Launch payment using official PayHere callback style
+  // Callbacks must be set as properties on window.payhere (not inline in payment object)
   return new Promise((resolve) => {
+    window.payhere.onCompleted = (ordId) => resolve({ success: true, orderId: ordId })
+    window.payhere.onDismissed = () => resolve({ success: false, reason: 'dismissed' })
+    window.payhere.onError     = (error) => resolve({ success: false, reason: 'error', message: String(error) })
+
     window.payhere.startPayment({
       sandbox:     PAYHERE_MODE !== 'live',
       merchant_id: PAYHERE_MERCHANT_ID,
       return_url:  `${window.location.origin}/order-success`,
       cancel_url:  `${window.location.origin}/cart`,
-      notify_url:  notifyUrl,
+      notify_url:  'https://thisara.store/api/payhere-notify',
       order_id:    orderId,
       items:       `${SHOP_NAME} Order #${orderId}`,
       amount:      Number(amount).toFixed(2),
@@ -248,9 +227,6 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
       address:     'Sri Lanka',
       city:        'Ragama',
       country:     'Sri Lanka',
-      onCompleted:  (ordId) => resolve({ success: true,  orderId: ordId }),
-      onDismissed:  ()      => resolve({ success: false, reason: 'dismissed' }),
-      onError:      (error) => resolve({ success: false, reason: 'error', message: error }),
     })
   })
 }
