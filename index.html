@@ -2,16 +2,113 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Thisara Stores – Fresh groceries delivered to your door in Ragama, Sri Lanka. Order online with map pin delivery!" />
+
+    <!-- ── PRIMARY SEO ─────────────────────────────────────────────────── -->
+    <title>Thisara Stores | Fresh Grocery Delivery in Ragama, Sri Lanka</title>
+    <meta name="description" content="Thisara Stores — Fresh groceries delivered to your door in Ragama, Kandana, Ja-Ela, Wattala & nearby areas. Rice, spices, vegetables, dairy and more. Order online, pay by card or cash on delivery." />
+    <meta name="keywords" content="grocery delivery Ragama, online grocery Sri Lanka, fresh vegetables Ragama, rice delivery Kandana, grocery shop Ja-Ela, Thisara Stores, supermarket delivery Wattala, grocery near me Ragama" />
+    <meta name="author" content="Thisara Stores" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://thisara.store/" />
+
+    <!-- ── OPEN GRAPH (Facebook / WhatsApp previews) ─────────────────── -->
+    <meta property="og:type"        content="website" />
+    <meta property="og:url"         content="https://thisara.store/" />
+    <meta property="og:site_name"   content="Thisara Stores" />
+    <meta property="og:title"       content="Thisara Stores | Fresh Grocery Delivery — Ragama, Sri Lanka" />
+    <meta property="og:description" content="Order fresh groceries online — rice, spices, vegetables, dairy & more. Fast delivery to Ragama, Kandana, Ja-Ela, Wattala. Pay by card or cash on delivery." />
+    <meta property="og:image"       content="https://thisara.store/og-image.png" />
+    <meta property="og:image:width"  content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale"      content="en_LK" />
+
+    <!-- ── TWITTER CARD ──────────────────────────────────────────────── -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="Thisara Stores | Fresh Grocery Delivery — Ragama" />
+    <meta name="twitter:description" content="Fresh groceries delivered to your door in Ragama & surrounding areas. Order online now!" />
+    <meta name="twitter:image"       content="https://thisara.store/og-image.png" />
+
+    <!-- ── GEO / LOCAL SEO ───────────────────────────────────────────── -->
+    <meta name="geo.region"      content="LK-1" />
+    <meta name="geo.placename"   content="Ragama, Western Province, Sri Lanka" />
+    <meta name="geo.position"    content="7.0278;79.9212" />
+    <meta name="ICBM"            content="7.0278, 79.9212" />
+
+    <!-- ── THEME / PWA ───────────────────────────────────────────────── -->
     <meta name="theme-color" content="#1e6641" />
-    <meta property="og:title" content="Thisara Stores – Fresh Groceries | Ragama" />
-    <meta property="og:description" content="Fresh groceries delivered to your door across Ragama, Kandana, Ja-Ela and surrounding areas." />
-    <title>Thisara Stores | Ragama</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>" />
+
+    <!-- ── LOCAL BUSINESS STRUCTURED DATA (JSON-LD) ──────────────────── -->
+    <!-- This is what makes "grocery shop near me" work on Google -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "GroceryStore",
+      "name": "Thisara Stores",
+      "alternateName": "Thisara Store Ragama",
+      "description": "Fresh groceries delivered to your door in Ragama, Kandana, Ja-Ela, Wattala and nearby areas. Order rice, spices, vegetables, dairy and more online.",
+      "url": "https://thisara.store",
+      "telephone": "+94707779453",
+      "priceRange": "LKR",
+      "currenciesAccepted": "LKR",
+      "paymentAccepted": "Cash, Credit Card, Debit Card",
+      "image": "https://thisara.store/og-image.png",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Ragama",
+        "addressLocality": "Ragama",
+        "addressRegion": "Western Province",
+        "postalCode": "11010",
+        "addressCountry": "LK"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 7.0278,
+        "longitude": 79.9212
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+          "opens": "10:00",
+          "closes": "21:00"
+        }
+      ],
+      "areaServed": [
+        { "@type": "City", "name": "Ragama" },
+        { "@type": "City", "name": "Kandana" },
+        { "@type": "City", "name": "Ja-Ela" },
+        { "@type": "City", "name": "Wattala" },
+        { "@type": "City", "name": "Kelaniya" },
+        { "@type": "City", "name": "Peliyagoda" },
+        { "@type": "City", "name": "Ekala" },
+        { "@type": "City", "name": "Seeduwa" },
+        { "@type": "City", "name": "Minuwangoda" }
+      ],
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Fresh Groceries",
+        "itemListElement": [
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Rice & Grains" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Fresh Vegetables & Fruits" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Spices & Dry Food" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Dairy & Eggs" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Drinks & Beverages" } }
+        ]
+      },
+      "sameAs": [
+        "https://www.facebook.com/thisarastores",
+        "https://wa.me/94707779453"
+      ]
+    }
+    </script>
+
+    <!-- ── FONTS ──────────────────────────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
     <style>
       body { margin:0; background:#fffbf0; font-family:'Nunito',sans-serif; }
       #root { min-height:100vh; }
@@ -19,7 +116,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- PayHere SDK is loaded dynamically by Cart.jsx — no script tag needed here -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
