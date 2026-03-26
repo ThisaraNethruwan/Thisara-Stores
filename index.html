@@ -13,15 +13,15 @@
     <link rel="canonical" href="https://thisara.store/" />
 
     <!-- ── OPEN GRAPH (Facebook / WhatsApp previews) ─────────────────── -->
-    <meta property="og:type"        content="website" />
-    <meta property="og:url"         content="https://thisara.store/" />
-    <meta property="og:site_name"   content="Thisara Stores" />
-    <meta property="og:title"       content="Thisara Stores | Fresh Grocery Delivery — Ragama, Sri Lanka" />
-    <meta property="og:description" content="Order fresh groceries online — rice, spices, vegetables, dairy & more. Fast delivery to Ragama, Kandana, Ja-Ela, Wattala. Pay by card or cash on delivery." />
-    <meta property="og:image"       content="https://thisara.store/og-image.png" />
+    <meta property="og:type"         content="website" />
+    <meta property="og:url"          content="https://thisara.store/" />
+    <meta property="og:site_name"    content="Thisara Stores" />
+    <meta property="og:title"        content="Thisara Stores | Fresh Grocery Delivery — Ragama, Sri Lanka" />
+    <meta property="og:description"  content="Order fresh groceries online — rice, spices, vegetables, dairy & more. Fast delivery to Ragama, Kandana, Ja-Ela, Wattala. Pay by card or cash on delivery." />
+    <meta property="og:image"        content="https://thisara.store/og-image.png" />
     <meta property="og:image:width"  content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:locale"      content="en_LK" />
+    <meta property="og:locale"       content="en_LK" />
 
     <!-- ── TWITTER CARD ──────────────────────────────────────────────── -->
     <meta name="twitter:card"        content="summary_large_image" />
@@ -30,17 +30,24 @@
     <meta name="twitter:image"       content="https://thisara.store/og-image.png" />
 
     <!-- ── GEO / LOCAL SEO ───────────────────────────────────────────── -->
-    <meta name="geo.region"      content="LK-1" />
-    <meta name="geo.placename"   content="Ragama, Western Province, Sri Lanka" />
-    <meta name="geo.position"    content="7.0278;79.9212" />
-    <meta name="ICBM"            content="7.0278, 79.9212" />
+    <meta name="geo.region"    content="LK-1" />
+    <meta name="geo.placename" content="Ragama, Western Province, Sri Lanka" />
+    <meta name="geo.position"  content="7.0278;79.9212" />
+    <meta name="ICBM"          content="7.0278, 79.9212" />
 
-    <!-- ── THEME / PWA ───────────────────────────────────────────────── -->
+    <!-- ── THEME COLOR ───────────────────────────────────────────────── -->
     <meta name="theme-color" content="#1e6641" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏪</text></svg>" />
+
+    <!-- ── FAVICON ───────────────────────────────────────────────────── -->
+    <!-- Generate these files from your logo at https://realfavicongenerator.net -->
+    <!-- Then place all files inside your /public folder                         -->
+    <link rel="icon"             type="image/x-icon" href="/public/logo-round.png" />
+    <link rel="icon"             type="image/png"    sizes="32x32"   href="/public/favicon-32x32.png" />
+    <link rel="icon"             type="image/png"    sizes="16x16"   href="/public/favicon-16x16.png" />
+    <link rel="apple-touch-icon"                     sizes="180x180" href="/public/apple-touch-icon.png" />
+    <link rel="manifest" href="/public/site.webmanifest" />
 
     <!-- ── LOCAL BUSINESS STRUCTURED DATA (JSON-LD) ──────────────────── -->
-    <!-- This is what makes "grocery shop near me" work on Google -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -54,6 +61,7 @@
       "currenciesAccepted": "LKR",
       "paymentAccepted": "Cash, Credit Card, Debit Card",
       "image": "https://thisara.store/og-image.png",
+      "logo": "https://thisara.store/logo.png",
       "address": {
         "@type": "PostalAddress",
         "streetAddress": "Ragama",
@@ -104,14 +112,35 @@
     }
     </script>
 
+    <!-- ── ORGANIZATION STRUCTURED DATA ──────────────────────────────── -->
+    <!-- This tells Google which image to use as your logo in search results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Thisara Stores",
+      "url": "https://thisara.store",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://thisara.store/logo.png",
+        "width": 512,
+        "height": 512
+      },
+      "sameAs": [
+        "https://web.facebook.com/profile.php?id=61579475927440",
+        "https://wa.me/94707779453"
+      ]
+    }
+    </script>
+
     <!-- ── FONTS ──────────────────────────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
     <style>
-      body { margin:0; background:#fffbf0; font-family:'Nunito',sans-serif; }
-      #root { min-height:100vh; }
+      body { margin: 0; background: #fffbf0; font-family: 'Nunito', sans-serif; }
+      #root { min-height: 100vh; }
     </style>
   </head>
   <body>
