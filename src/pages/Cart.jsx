@@ -160,51 +160,10 @@ export default function Cart() {
     setSubmitting(false)
   }
 
-  const handleCardOrder = async () => {
-    if (!validate()) { toast.error('Please fill all required fields'); return }
-    if (!PAYHERE_MERCHANT_ID) { toast.error('PayHere not configured.'); return }
-    if (isLocalhost) { toast.error('PayHere does not work on localhost. Deploy to Vercel.', { duration: 5000 }); return }
-    setSubmitting(true)
-    const loadingToast = toast.loading('Connecting to PayHere...')
-    const fee = deliveryFee ?? 0
-    const tot = total + fee
-    const id  = `TS${Math.floor(Math.random() * 90000) + 10000}`
-    const payload = buildPayload(fee, tot, id, 'pending')
-
-    // Save order to Firestore before opening PayHere
-    try { await addOrder(payload) } catch (e) { console.error('Firebase pre-save error:', e) }
-
-    const result = await launchPayHere({
-      orderId: id,
-      amount: tot,
-      customerName: form.name.trim(),
-      customerPhone: form.phone.replace(/\s/g, ''),
-    })
-    toast.dismiss(loadingToast)
-
-    if (result.success) {
-      // ✅ Update Firestore order to mark payment as paid
-      try {
-        await updateDoc(doc(db, 'orders', id), {
-          paymentStatus: 'paid',
-          updatedAt: serverTimestamp(),
-        })
-      } catch (e) { console.error('Failed to update paymentStatus:', e) }
-
-      await sendTelegramNotification({ ...payload, paymentStatus: 'paid' })
-      clearCart()
-      toast.success('Payment successful! 🎉')
-      navigate('/order-success', { state: { name: form.name, orderId: id, method: 'card' } })
-    } else if (result.reason === 'dismissed') {
-      toast.error('Payment cancelled. Your cart is still saved.')
-      setSubmitting(false)
-    } else {
-      toast.error(result.message || 'Payment failed. Please try again.', { duration: 6000 })
-      setSubmitting(false)
-    }
+  const handleOrder = () => {
+    if (paymentMethod === 'card') return
+    handleCODOrder()
   }
-
-  const handleOrder = () => paymentMethod === 'card' ? handleCardOrder() : handleCODOrder()
 
   if (cart.length === 0) return (
     <main style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'70vh', padding:24, background:'#fffbf0' }}>
@@ -269,14 +228,23 @@ export default function Cart() {
         .pm-btn.active .pm-btn-label{color:#1e6641}
         .info-box{border-radius:12px;padding:11px 14px;font-size:13px;font-weight:600;margin-bottom:18px;display:flex;gap:8px;align-items:flex-start;line-height:1.6}
         .info-green{background:#f0fff4;border:1.5px solid #86efac;color:#166534}
-        .info-blue{background:#eff6ff;border:1.5px solid #93c5fd;color:#1e40af}
-        .sandbox-badge{display:inline-flex;align-items:center;gap:5px;background:#fff9ec;border:1.5px solid #fde68a;color:#92400e;padding:5px 12px;border-radius:50px;font-size:11px;font-weight:700;margin-bottom:10px}
+        .info-coming-soon{background:#fdf4ff;border:1.5px solid #e9d5ff;color:#6b21a8}
+        .coming-soon-box{background:#ffffff;
+        border:2px solid #083982;
+        border-radius:14px;
+        padding:18px 16px;margin-bottom:18px;text-align:center}
+        .coming-soon-icon{font-size:36px;margin-bottom:8px}
+        .coming-soon-title{font-size:15px;font-weight:800;color:#083982;margin-bottom:4px}
+        .coming-soon-desc{font-size:12px;color:#083982;line-height:1.6;font-weight:500}
+        .coming-soon-badge{display:inline-flex;align-items:center;gap:5px;background:#d5e2ff;color:#083982;padding:4px 12px;border-radius:50px;font-size:11px;font-weight:800;margin-top:10px;letter-spacing:.4px}
         .order-btn{width:100%;padding:16px;border-radius:12px;font-weight:800;font-size:16px;border:none;cursor:pointer;margin-bottom:10px;font-family:'Nunito',sans-serif;transition:all .2s}
         .order-btn:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(30,102,65,.3)}
-        .order-btn:disabled{background:#ccc!important;cursor:not-allowed}
+        .order-btn:disabled{background:#d1d5db!important;color:#9ca3af!important;cursor:not-allowed!important;transform:none!important;box-shadow:none!important}
         @media(max-width:900px){.cp-grid{grid-template-columns:1fr!important}.fc{position:static}}
         @media(max-width:540px){.ci{flex-wrap:wrap;gap:8px}.ci-ctrl{width:100%;justify-content:space-between}}
-      `}</style>
+      `}
+      background: #d5e2ff;
+      </style>
 
       <main className="cp">
         <div className="cp-hdr">
@@ -409,35 +377,46 @@ export default function Cart() {
                   </button>
                 </div>
               </div>
+
               {paymentMethod === 'cod' ? (
-                <div className="info-box info-green">
-                  <span>Your order will be confirmed instantly. We'll call you to arrange delivery!</span>
-                </div>
+                <>
+                  <div className="info-box info-green">
+                    <span>Your order will be confirmed instantly. We'll call you to arrange delivery!</span>
+                  </div>
+                  <button
+                    className="order-btn"
+                    onClick={handleOrder}
+                    disabled={submitting}
+                    style={{ background: submitting ? '#ccc' : '#086129', color:'#fff' }}
+                  >
+                    {submitting ? '⏳ Processing...' : `🛒 Place Order — Rs. ${grandTotal.toLocaleString()}`}
+                  </button>
+                  <p style={{ fontSize:12, color:'#999', textAlign:'center', lineHeight:1.6 }}>
+                    We'll contact you to confirm your delivery 📞
+                  </p>
+                </>
               ) : (
                 <>
-                  {PAYHERE_MODE === 'sandbox' && !isLocalhost && (
-                    <div className="sandbox-badge">🧪 Sandbox — use PayHere test cards only</div>
-                  )}
-                  <div className="info-box info-blue">
-                    <span>Secure payment via PayHere. Order confirmed automatically after payment.</span>
+                  <div className="coming-soon-box">
+                    <div className="coming-soon-title">Card Payment Not Available Yet</div>
+                    <div className="coming-soon-desc">
+                      Online card payment is currently under development.<br />
+                      We're working hard to bring you a secure and seamless payment experience very soon!
+                    </div>
+                    <span className="coming-soon-badge">Coming Soon</span>
                   </div>
+                  <button
+                    className="order-btn"
+                    disabled={true}
+                    style={{ background:'#d1d5db', color:'#9ca3af' }}
+                  >
+                    💳 Pay by Card — Coming Soon
+                  </button>
+                  <p style={{ fontSize:12, color:'#b45309', textAlign:'center', lineHeight:1.6, fontWeight:600 }}>
+                    Please use Cash on Delivery for now 💵
+                  </p>
                 </>
               )}
-              <button
-                className="order-btn"
-                onClick={handleOrder}
-                disabled={submitting}
-                style={{ background: submitting ? '#ccc' : paymentMethod === 'card' ? '#1d4ed8' : '#086129', color:'#fff' }}
-              >
-                {submitting
-                  ? '⏳ Processing...'
-                  : paymentMethod === 'card'
-                    ? `💳 Pay Now — Rs. ${grandTotal.toLocaleString()}`
-                    : `🛒 Place Order — Rs. ${grandTotal.toLocaleString()}`}
-              </button>
-              <p style={{ fontSize:12, color:'#999', textAlign:'center', lineHeight:1.6 }}>
-                {paymentMethod === 'card' ? 'Secure payment powered by PayHere 🔒' : "We'll contact you to confirm your delivery 📞"}
-              </p>
             </div>
           </div>
         </div>
