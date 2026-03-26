@@ -36,50 +36,49 @@ async function reverseGeocode(lat, lng) {
   }
 }
 
-function requestGeolocation(onSuccess, onError) {
+function requestGeolocation(onSuccess, onError, options = {}) {
   if (!navigator.geolocation) {
-    onError({ code: 0 })
+    onError({ code: 0, message: 'Geolocation is not supported by this browser.' })
     return
   }
-
+  // maximumAge: 0 forces the browser to not use a cached position/permission state
   navigator.geolocation.getCurrentPosition(onSuccess, onError, {
     enableHighAccuracy: true,
     timeout: 15000,
-    maximumAge: 0, // 🔥 critical: always fresh request
+    maximumAge: 0, 
+    ...options,
   })
 }
 
-export default function LocationPicker({
-  onLocationSelect,
-  initialAddress = '',
-  cartTotal = 0,
-  forceRequest
-}) {
-  const mapRef = useRef(null)
-  const mapInstance = useRef(null)
-  const markerRef = useRef(null)
+export default function LocationPicker({ onLocationSelect, initialAddress = '', cartTotal = 0 }) {
+  const mapRef       = useRef(null)
+  const mapInstance  = useRef(null)
+  const markerRef    = useRef(null)
   const cartTotalRef = useRef(cartTotal)
+  const autoTriedRef = useRef(false)
 
-  const [address, setAddress] = useState(initialAddress)
-  const [loading, setLoading] = useState(false)
-  const [pinInfo, setPinInfo] = useState(null)
-  const [geoStatus, setGeoStatus] = useState('idle')
-  const [geoMsg, setGeoMsg] = useState('')
+  const [mode, setMode]           = useState('map')
+  const [address, setAddress]     = useState(initialAddress)
+  const [loading, setLoading]     = useState(false)
+  const [pinInfo, setPinInfo]     = useState(null)
+  const [geoStatus, setGeoStatus] = useState('idle') // idle | asking | denied | error | success
+  const [geoMsg, setGeoMsg]       = useState('')
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [mapReady, setMapReady] = useState(false)
+  const [mapReady, setMapReady]   = useState(false)
 
-  useEffect(() => {
-    cartTotalRef.current = cartTotal
-  }, [cartTotal])
+  useEffect(() => { cartTotalRef.current = cartTotal }, [cartTotal])
 
-  // Load Leaflet
+  // ── Load Leaflet ──────────────────────────────────────────────────────────
   useEffect(() => {
-    if (window.L) {
-      setMapLoaded(true)
-      return
+    if (window.L) { setMapLoaded(true); return }
+    if (document.getElementById('leaflet-css')) {
+      const check = setInterval(() => {
+        if (window.L) { setMapLoaded(true); clearInterval(check) }
+      }, 100)
+      return () => clearInterval(check)
     }
-
     const css = document.createElement('link')
+    css.id = 'leaflet-css'
     css.rel = 'stylesheet'
     css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
     document.head.appendChild(css)
@@ -90,36 +89,88 @@ export default function LocationPicker({
     document.head.appendChild(script)
   }, [])
 
-  // Init map
+  // ── Init map ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!mapLoaded || !mapRef.current || mapInstance.current) return
-
+    if (!mapLoaded || mode !== 'map' || !mapRef.current || mapInstance.current) return
     const L = window.L
 
-    const map = L.map(mapRef.current).setView([SHOP_LAT, SHOP_LNG], 15)
+    const map = L.map(mapRef.current, {
+      zoomControl: true,
+      tap: true,
+      tapTolerance: 15,
+    }).setView([SHOP_LAT, SHOP_LNG], 15)
+
+    // ── Google Maps tile layer ──────────────────────────────────────────────
+    L.tileLayer(
+      'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=en&gl=LK',
+      {
+        attribution: '© Google Maps',
+        maxZoom: 20,
+        subdomains: ['mt0','mt1','mt2','mt3'],
+      }
+    ).addTo(map)
+
+    map.eachLayer(layer => {
+      if (layer._url && layer._url.includes('google')) {
+        map.removeLayer(layer)
+      }
+    })
 
     L.tileLayer(
       'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=en&gl=LK',
       {
         subdomains: ['mt0','mt1','mt2','mt3'],
+        attribution: '© Google Maps',
         maxZoom: 20,
       }
     ).addTo(map)
 
-    const marker = L.marker([SHOP_LAT, SHOP_LNG], { draggable: true }).addTo(map)
+    // ── Shop marker ──────────────────────────────────────────────────────────
+    const shopIcon = L.divIcon({
+      html: `<div style="background:#1e6641;color:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.4);">🏪</div>`,
+      className: '', iconSize: [40, 40], iconAnchor: [20, 20],
+    })
+    L.marker([SHOP_LAT, SHOP_LNG], { icon: shopIcon })
+      .addTo(map)
+      .bindPopup('<b style="font-family:sans-serif">🏪 Our Shop</b><br><small>Location</small>')
+
+    // ── Delivery marker ──────────────────────────────────────────────────────
+    const deliveryIcon = L.divIcon({
+      html: `
+        <div style="position:relative;width:32px;height:44px;">
+          <div style="
+            background:#e63946;width:32px;height:32px;border-radius:50% 50% 50% 0;
+            transform:rotate(-45deg);border:3px solid #fff;
+            box-shadow:0 2px 12px rgba(0,0,0,.4);
+            display:flex;align-items:center;justify-content:center;
+          ">
+            <span style="transform:rotate(45deg);font-size:16px;">📍</span>
+          </div>
+          <div style="
+            width:6px;height:6px;background:#e63946;border-radius:50%;
+            position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+            box-shadow:0 1px 4px rgba(0,0,0,.3);
+          "></div>
+        </div>`,
+      className: '', iconSize: [32, 44], iconAnchor: [16, 44],
+    })
+    const marker = L.marker([SHOP_LAT, SHOP_LNG], { icon: deliveryIcon, draggable: true }).addTo(map)
     markerRef.current = marker
 
     const handleLatLng = async (lat, lng) => {
       setLoading(true)
-
-      const addr = await reverseGeocode(lat, lng)
+      
+      // If user interacts with map manually, completely clear any errors
+      setGeoStatus('idle') 
+      setGeoMsg('')
+      
+      const addr   = await reverseGeocode(lat, lng)
       const distKm = calcDistanceKm(SHOP_LAT, SHOP_LNG, lat, lng)
-      const fee = calcFee(distKm, cartTotalRef.current)
-
+      const fee    = calcFee(distKm, cartTotalRef.current)
+      
       setAddress(addr)
       setPinInfo({ lat, lng, distKm, fee })
       onLocationSelect({ address: addr, lat, lng, distKm, fee })
-
       setLoading(false)
     }
 
@@ -138,116 +189,242 @@ export default function LocationPicker({
     setTimeout(() => {
       map.invalidateSize()
       setMapReady(true)
-    }, 200)
+    }, 150)
 
-    return () => map.remove()
-  }, [mapLoaded])
+    return () => {
+      map.remove()
+      mapInstance.current = null
+      markerRef.current   = null
+      setMapReady(false)
+    }
+  }, [mapLoaded, mode]) // eslint-disable-line
 
-  // 🔥 MAIN FIX: always request location on Cart load
+  // ── Auto-try GPS once map ready ───────────────────────────────────────────
   useEffect(() => {
-    if (!mapReady) return
-
+    if (!mapReady || autoTriedRef.current) return
+    autoTriedRef.current = true
     setGeoStatus('asking')
-    setGeoMsg('')
-    setLoading(true)
 
     requestGeolocation(
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords
-
         if (mapInstance.current && markerRef.current) {
           mapInstance.current.setView([lat, lng], 17)
           markerRef.current.setLatLng([lat, lng])
         }
-
-        const addr = await reverseGeocode(lat, lng)
+        const addr   = await reverseGeocode(lat, lng)
         const distKm = calcDistanceKm(SHOP_LAT, SHOP_LNG, lat, lng)
-        const fee = calcFee(distKm, cartTotalRef.current)
-
+        const fee    = calcFee(distKm, cartTotalRef.current)
         setAddress(addr)
         setPinInfo({ lat, lng, distKm, fee })
         onLocationSelect({ address: addr, lat, lng, distKm, fee })
-
         setGeoStatus('success')
         setLoading(false)
       },
       (err) => {
+        setGeoStatus(err.code === 1 ? 'denied' : 'error')
+        setGeoMsg(
+          err.code === 1
+            ? 'Location access blocked. Please allow and try again.'
+            : 'Could not get your location. Please pin manually on the map.'
+        )
         setLoading(false)
-
-        if (err.code === 1) {
-          setGeoStatus('denied')
-          setGeoMsg('Location blocked. Please enable it in browser settings.')
-        } else {
-          setGeoStatus('error')
-          setGeoMsg('Unable to fetch location. Try again.')
-        }
       }
     )
-  }, [forceRequest, mapReady])
+  }, [mapReady]) // eslint-disable-line
 
-  // Retry button
+  // ── Recalc fee when cart total changes ────────────────────────────────────
+  useEffect(() => {
+    if (!pinInfo) return
+    const fee = calcFee(pinInfo.distKm, cartTotal)
+    if (fee !== pinInfo.fee) {
+      const updated = { ...pinInfo, fee }
+      setPinInfo(updated)
+      onLocationSelect({ address, lat: pinInfo.lat, lng: pinInfo.lng, distKm: pinInfo.distKm, fee })
+    }
+  }, [cartTotal]) // eslint-disable-line
+
+  // ── Manual GPS button (Robust Retry Logic) ────────────────────────────────
   const useMyLocation = useCallback(() => {
-    setGeoStatus('asking')
+    // 1. Instantly wipe old errors and set loading state
     setGeoMsg('')
+    setGeoStatus('asking')
     setLoading(true)
 
-    requestGeolocation(
-      async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords
-
-        if (mapInstance.current && markerRef.current) {
-          mapInstance.current.setView([lat, lng], 17)
-          markerRef.current.setLatLng([lat, lng])
+    // 2. Use a tiny timeout to allow React to paint the UI changes (loading spinner) 
+    // before the browser potentially freezes the thread to check hardware/permissions.
+    setTimeout(() => {
+      requestGeolocation(
+        async (pos) => {
+          const { latitude: lat, longitude: lng } = pos.coords
+          if (mapInstance.current && markerRef.current) {
+            mapInstance.current.setView([lat, lng], 17)
+            markerRef.current.setLatLng([lat, lng])
+          }
+          const addr   = await reverseGeocode(lat, lng)
+          const distKm = calcDistanceKm(SHOP_LAT, SHOP_LNG, lat, lng)
+          const fee    = calcFee(distKm, cartTotal)
+          
+          setAddress(addr)
+          setPinInfo({ lat, lng, distKm, fee })
+          onLocationSelect({ address: addr, lat, lng, distKm, fee })
+          setGeoStatus('success')
+          setLoading(false)
+        },
+        (err) => {
+          setLoading(false)
+          // err.code 1 = Permission Denied
+          if (err.code === 1) {
+            setGeoStatus('denied')
+            setGeoMsg('Location access blocked. Please allow and try again.')
+          } else {
+            setGeoStatus('error')
+            setGeoMsg('Location unavailable right now. Please pin your location manually.')
+          }
         }
+      )
+    }, 50)
+  }, [cartTotal, onLocationSelect])
 
-        const addr = await reverseGeocode(lat, lng)
-        const distKm = calcDistanceKm(SHOP_LAT, SHOP_LNG, lat, lng)
-        const fee = calcFee(distKm, cartTotalRef.current)
+  const handleTextChange = (val) => {
+    setAddress(val)
+    setPinInfo(null)
+    onLocationSelect({ address: val, lat: null, lng: null, distKm: null, fee: null })
+  }
 
-        setAddress(addr)
-        setPinInfo({ lat, lng, distKm, fee })
-        onLocationSelect({ address: addr, lat, lng, distKm, fee })
+  const switchMode = (m) => {
+    if (m === mode) return
+    if (m === 'map') {
+      mapInstance.current  = null
+      autoTriedRef.current = false
+    }
+    setMode(m)
+  }
 
-        setGeoStatus('success')
-        setLoading(false)
-      },
-      () => {
-        setLoading(false)
-        setGeoStatus('error')
-        setGeoMsg('Retry failed. Please allow location.')
-      }
-    )
-  }, [onLocationSelect])
+  const isAsking = geoStatus === 'asking'
 
   return (
     <div>
-      <button onClick={useMyLocation} disabled={loading}>
-        {loading ? 'Getting location...' : '📍 Use My Current Location'}
-      </button>
+      <style>{`
+        .lp-tabs { display:flex; gap:8px; margin-bottom:12px; }
+        .lp-tab { flex:1; padding:10px 8px; border-radius:10px; border:2px solid #e8ede9; background:#fff; font-weight:700; font-size:13px; cursor:pointer; color:#666; font-family:'Nunito',sans-serif; transition:all .2s; }
+        .lp-tab.active { border-color:#1e6641; background:#f0faf3; color:#1e6641; }
+        .lp-btn-gps { width:100%; margin-bottom:10px; padding:13px; border-radius:10px; background:linear-gradient(135deg,#1a3d28,#1e6641); color:#fff; font-weight:700; font-size:14px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-family:'Nunito',sans-serif; box-shadow:0 4px 14px rgba(30,102,65,.3); transition:all .2s; }
+        .lp-btn-gps:disabled { background:#94a3b8; box-shadow:none; cursor:not-allowed; }
+        .lp-btn-gps.success { background:linear-gradient(135deg,#065f46,#059669); }
+        .lp-btn-gps:not(:disabled):hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(30,102,65,.35); }
+        .lp-asking { background:#fff9ec; border:1.5px solid #fcd34d; border-radius:8px; padding:10px 12px; font-size:12px; color:#92400e; margin-bottom:10px; display:flex; gap:8px; align-items:center; line-height:1.5; }
+        .lp-denied { background:#fff5f5; border:1.5px solid #fca5a5; border-radius:8px; padding:10px 12px; font-size:12px; color:#b91c1c; margin-bottom:10px; line-height:1.6; }
+        .lp-map-wrap { width:100%; height:300px; border-radius:14px; overflow:hidden; border:2px solid #e0e0e0; position:relative; box-shadow:0 2px 12px rgba(0,0,0,.1); }
+        .lp-map-skeleton { height:300px; border-radius:14px; background:#f0faf3; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; color:#1e6641; }
+        .lp-pin-info { margin-top:10px; border-radius:12px; padding:12px 14px; font-size:13px; }
+        .lp-hint { font-size:11px; color:#888; text-align:center; margin-top:6px; display:flex; align-items:center; justify-content:center; gap:6px; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        @keyframes lp-pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+        .lp-loading-dot { animation:lp-pulse 1.2s ease infinite; }
+      `}</style>
 
-      {geoStatus === 'asking' && (
-        <p>🔔 Please allow location access in your browser</p>
+      {/* Mode tabs */}
+      <div className="lp-tabs">
+        {[['map', '📍 Pin on Map'], ['text', '✍️ Type Address']].map(([m, label]) => (
+          <button
+            key={m} type="button"
+            className={`lp-tab${mode === m ? ' active' : ''}`}
+            onClick={() => switchMode(m)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* TEXT MODE */}
+      {mode === 'text' && (
+        <div>
+          <textarea
+            rows={3}
+            placeholder="Enter your full delivery address (house no, street, area, city)..."
+            value={address}
+            onChange={e => handleTextChange(e.target.value)}
+            style={{
+              width:'100%', padding:'11px 14px',
+              border:'2px solid #e8ede9', borderRadius:10,
+              fontSize:14, outline:'none', background:'#fff',
+              fontFamily:"'Nunito',sans-serif", resize:'vertical',
+              transition:'border-color .2s', boxSizing:'border-box',
+            }}
+            onFocus={e => (e.target.style.borderColor = '#52b788')}
+            onBlur={e => (e.target.style.borderColor = '#e8ede9')}
+          />
+          <p style={{ fontSize:11, color:'#f59e0b', marginTop:4, fontWeight:600 }}>
+            ⚠️ Typed address — delivery fee will be confirmed by our team on call.
+          </p>
+        </div>
       )}
 
-      {geoMsg && (
-        <p style={{ color: 'red' }}>{geoMsg}</p>
-      )}
+      {/* MAP MODE */}
+      {mode === 'map' && (
+        <div>
+          {/* GPS button */}
+          <button
+            type="button"
+            className={`lp-btn-gps ${geoStatus === 'success' ? 'success' : ''}`}
+            onClick={useMyLocation}
+            disabled={loading || isAsking}
+          >
+            {loading || isAsking
+              ? <><span style={{ animation:'spin 1s linear infinite', display:'inline-block', fontSize:16 }}>⏳</span> Getting your location...</>
+              : geoStatus === 'success'
+                ? <>✅ Location updated success</>
+                : <>📍 Use My Current Location (GPS)</>
+            }
+          </button>
 
-      <div
-        ref={mapRef}
-        style={{
-          width: '100%',
-          height: 300,
-          marginTop: 10,
-          borderRadius: 10,
-        }}
-      />
+          {isAsking && !loading && (
+            <div className="lp-asking">
+              <span style={{ fontSize:16, flexShrink:0 }}>🔔</span>
+              <span>Your browser is asking for location permission — please tap <strong>Allow</strong> when prompted.</span>
+            </div>
+          )}
 
-      {pinInfo && (
-        <p style={{ marginTop: 10 }}>
-          📍 {address} <br />
-          🚚 {pinInfo.distKm.toFixed(2)} km — Rs. {pinInfo.fee}
-        </p>
+          {(geoStatus === 'denied' || geoStatus === 'error') && geoMsg && (
+            <div className="lp-denied">
+              <strong>{geoStatus === 'denied' ? '🚫 Location access blocked.' : '⚠️ Location unavailable.'}</strong>
+              <br />{geoMsg}<br />
+              <span style={{ color:'#555' }}>You can also pin your location manually by clicking or dragging on the map below.</span>
+            </div>
+          )}
+
+          {/* Map */}
+          {!mapLoaded ? (
+            <div className="lp-map-skeleton">
+              <div style={{ fontSize:32, animation:'spin 1s linear infinite' }}>🗺️</div>
+              <div style={{ fontWeight:700, fontSize:13 }}>Loading Google Maps...</div>
+            </div>
+          ) : (
+            <div className="lp-map-wrap">
+              <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
+              {loading && (
+                <div style={{
+                  position:'absolute', inset:0, background:'rgba(255,255,255,.75)',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize:14, fontWeight:700, color:'#1e6641', gap:8, zIndex:999,
+                  borderRadius:14,
+                }}>
+                  <span style={{ animation:'spin 1s linear infinite', display:'inline-block' }}>⏳</span>
+                  Getting your address...
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="lp-hint">
+            <span>🏪 Green = Our shop</span>
+            <span>·</span>
+            <span>📍 Red = Your location</span>
+            <span>·</span>
+            <span>Tap map or drag pin to change</span>
+          </div>
+        </div>
       )}
     </div>
   )
