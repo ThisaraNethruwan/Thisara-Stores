@@ -87,7 +87,7 @@ function getLocationInstructions(browser, os) {
         'Go to iPhone Settings → Chrome',
         'Tap "Location"',
         'Select "While Using the App"',
-        'Come back and tap "Use My Current Location" again',
+        'Refresh the page and tap "Use My Current Location" again',
       ],
     },
     'safari-ios': {
@@ -565,7 +565,7 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
                   </ol>
                   <div className="lp-manual-note">
                     <span>💡</span>
-                    <span>After updating settings, come back here and tap the <strong>"Use My Current Location"</strong> button again. Or simply drag the red pin on the map to your location.</span>
+                    <span>After updating settings, refresh the page and tap the <strong>"Use My Current Location"</strong> button again. Or simply drag the red pin on the map to your location.</span>
                   </div>
                 </div>
               )}
