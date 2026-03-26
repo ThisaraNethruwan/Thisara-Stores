@@ -41,10 +41,11 @@ function requestGeolocation(onSuccess, onError, options = {}) {
     onError({ code: 0, message: 'Geolocation is not supported by this browser.' })
     return
   }
+  // maximumAge: 0 forces the browser to not use a cached position/permission state
   navigator.geolocation.getCurrentPosition(onSuccess, onError, {
     enableHighAccuracy: true,
     timeout: 15000,
-    maximumAge: 0,
+    maximumAge: 0, 
     ...options,
   })
 }
@@ -60,7 +61,7 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
   const [address, setAddress]     = useState(initialAddress)
   const [loading, setLoading]     = useState(false)
   const [pinInfo, setPinInfo]     = useState(null)
-  const [geoStatus, setGeoStatus] = useState('idle')
+  const [geoStatus, setGeoStatus] = useState('idle') // idle | asking | denied | error | success
   const [geoMsg, setGeoMsg]       = useState('')
   const [mapLoaded, setMapLoaded] = useState(false)
   const [mapReady, setMapReady]   = useState(false)
@@ -99,28 +100,22 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
       tapTolerance: 15,
     }).setView([SHOP_LAT, SHOP_LNG], 15)
 
-    // ── Google Maps tile layer — looks exactly like Google Maps ─────────────
-    // Uses Google's satellite+labels hybrid style which is familiar to everyone
-    // and shows Sri Lankan place names, roads, and landmarks correctly.
+    // ── Google Maps tile layer ──────────────────────────────────────────────
     L.tileLayer(
       'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=en&gl=LK',
       {
         attribution: '© Google Maps',
         maxZoom: 20,
-        // Rotate between Google tile servers for performance
         subdomains: ['mt0','mt1','mt2','mt3'],
       }
     ).addTo(map)
 
-    // Use proper subdomains for load balancing
-    // Override with the correct URL format
     map.eachLayer(layer => {
       if (layer._url && layer._url.includes('google')) {
         map.removeLayer(layer)
       }
     })
 
-    // Re-add with proper subdomain rotation
     L.tileLayer(
       'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=en&gl=LK',
       {
@@ -137,7 +132,7 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
     })
     L.marker([SHOP_LAT, SHOP_LNG], { icon: shopIcon })
       .addTo(map)
-      .bindPopup('<b style="font-family:sans-serif">🏪 Thisara Stores</b><br><small>Our Shop Location</small>')
+      .bindPopup('<b style="font-family:sans-serif">🏪 Our Shop</b><br><small>Location</small>')
 
     // ── Delivery marker ──────────────────────────────────────────────────────
     const deliveryIcon = L.divIcon({
@@ -164,9 +159,15 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
 
     const handleLatLng = async (lat, lng) => {
       setLoading(true)
+      
+      // If user interacts with map manually, completely clear any errors
+      setGeoStatus('idle') 
+      setGeoMsg('')
+      
       const addr   = await reverseGeocode(lat, lng)
       const distKm = calcDistanceKm(SHOP_LAT, SHOP_LNG, lat, lng)
       const fee    = calcFee(distKm, cartTotalRef.current)
+      
       setAddress(addr)
       setPinInfo({ lat, lng, distKm, fee })
       onLocationSelect({ address: addr, lat, lng, distKm, fee })
@@ -217,14 +218,14 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
         setAddress(addr)
         setPinInfo({ lat, lng, distKm, fee })
         onLocationSelect({ address: addr, lat, lng, distKm, fee })
-        setGeoStatus('idle')
+        setGeoStatus('success')
         setLoading(false)
       },
       (err) => {
         setGeoStatus(err.code === 1 ? 'denied' : 'error')
         setGeoMsg(
           err.code === 1
-            ? 'Location access denied. Tap "Use My Location" to try again, or pin manually on the map.'
+            ? 'Location access blocked. Please allow and try again.'
             : 'Could not get your location. Please pin manually on the map.'
         )
         setLoading(false)
@@ -243,49 +244,46 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
     }
   }, [cartTotal]) // eslint-disable-line
 
-  // ── Manual GPS button ─────────────────────────────────────────────────────
+  // ── Manual GPS button (Robust Retry Logic) ────────────────────────────────
   const useMyLocation = useCallback(() => {
+    // 1. Instantly wipe old errors and set loading state
     setGeoMsg('')
     setGeoStatus('asking')
     setLoading(true)
 
-    requestGeolocation(
-      async (pos) => {
-        const { latitude: lat, longitude: lng } = pos.coords
-        if (mapInstance.current && markerRef.current) {
-          mapInstance.current.setView([lat, lng], 17)
-          markerRef.current.setLatLng([lat, lng])
+    // 2. Use a tiny timeout to allow React to paint the UI changes (loading spinner) 
+    // before the browser potentially freezes the thread to check hardware/permissions.
+    setTimeout(() => {
+      requestGeolocation(
+        async (pos) => {
+          const { latitude: lat, longitude: lng } = pos.coords
+          if (mapInstance.current && markerRef.current) {
+            mapInstance.current.setView([lat, lng], 17)
+            markerRef.current.setLatLng([lat, lng])
+          }
+          const addr   = await reverseGeocode(lat, lng)
+          const distKm = calcDistanceKm(SHOP_LAT, SHOP_LNG, lat, lng)
+          const fee    = calcFee(distKm, cartTotal)
+          
+          setAddress(addr)
+          setPinInfo({ lat, lng, distKm, fee })
+          onLocationSelect({ address: addr, lat, lng, distKm, fee })
+          setGeoStatus('success')
+          setLoading(false)
+        },
+        (err) => {
+          setLoading(false)
+          // err.code 1 = Permission Denied
+          if (err.code === 1) {
+            setGeoStatus('denied')
+            setGeoMsg('Location access blocked. Please allow and try again.')
+          } else {
+            setGeoStatus('error')
+            setGeoMsg('Location unavailable right now. Please pin your location manually.')
+          }
         }
-        const addr   = await reverseGeocode(lat, lng)
-        const distKm = calcDistanceKm(SHOP_LAT, SHOP_LNG, lat, lng)
-        const fee    = calcFee(distKm, cartTotal)
-        setAddress(addr)
-        setPinInfo({ lat, lng, distKm, fee })
-        onLocationSelect({ address: addr, lat, lng, distKm, fee })
-        setGeoStatus('idle')
-        setLoading(false)
-      },
-      (err) => {
-        setLoading(false)
-        if (err.code === 1) {
-          setGeoStatus('denied')
-          const ua = navigator.userAgent
-          const isIOS = /iPhone|iPad|iPod/.test(ua)
-          const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua)
-          const isFirefox = /Firefox/.test(ua)
-          let helpMsg = ''
-          if (isIOS) helpMsg = 'On iPhone/iPad: Settings → Privacy & Security → Location Services → Safari → Allow.'
-          else if (isSafari) helpMsg = 'Safari menu → Settings for This Website → Location → Allow.'
-          else if (isFirefox) helpMsg = 'Click the 🔒 lock icon in the address bar → Permissions → Use Location.'
-          else helpMsg = 'Click the 🔒 lock icon in your browser address bar → Site Settings → Location → Allow.'
-          setGeoMsg(helpMsg)
-        } else {
-          setGeoStatus('error')
-          setGeoMsg('Location unavailable. Please pin your location manually on the map.')
-        }
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    )
+      )
+    }, 50)
   }, [cartTotal, onLocationSelect])
 
   const handleTextChange = (val) => {
@@ -313,6 +311,7 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
         .lp-tab.active { border-color:#1e6641; background:#f0faf3; color:#1e6641; }
         .lp-btn-gps { width:100%; margin-bottom:10px; padding:13px; border-radius:10px; background:linear-gradient(135deg,#1a3d28,#1e6641); color:#fff; font-weight:700; font-size:14px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; font-family:'Nunito',sans-serif; box-shadow:0 4px 14px rgba(30,102,65,.3); transition:all .2s; }
         .lp-btn-gps:disabled { background:#94a3b8; box-shadow:none; cursor:not-allowed; }
+        .lp-btn-gps.success { background:linear-gradient(135deg,#065f46,#059669); }
         .lp-btn-gps:not(:disabled):hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(30,102,65,.35); }
         .lp-asking { background:#fff9ec; border:1.5px solid #fcd34d; border-radius:8px; padding:10px 12px; font-size:12px; color:#92400e; margin-bottom:10px; display:flex; gap:8px; align-items:center; line-height:1.5; }
         .lp-denied { background:#fff5f5; border:1.5px solid #fca5a5; border-radius:8px; padding:10px 12px; font-size:12px; color:#b91c1c; margin-bottom:10px; line-height:1.6; }
@@ -368,13 +367,15 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
           {/* GPS button */}
           <button
             type="button"
-            className="lp-btn-gps"
+            className={`lp-btn-gps ${geoStatus === 'success' ? 'success' : ''}`}
             onClick={useMyLocation}
             disabled={loading || isAsking}
           >
             {loading || isAsking
               ? <><span style={{ animation:'spin 1s linear infinite', display:'inline-block', fontSize:16 }}>⏳</span> Getting your location...</>
-              : <>📍 Use My Current Location (GPS)</>
+              : geoStatus === 'success'
+                ? <>✅ Location updated success</>
+                : <>📍 Use My Current Location (GPS)</>
             }
           </button>
 
@@ -387,7 +388,7 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
 
           {(geoStatus === 'denied' || geoStatus === 'error') && geoMsg && (
             <div className="lp-denied">
-              <strong>{geoStatus === 'denied' ? '🚫 Location access denied.' : '⚠️ Location unavailable.'}</strong>
+              <strong>{geoStatus === 'denied' ? '🚫 Location access blocked.' : '⚠️ Location unavailable.'}</strong>
               <br />{geoMsg}<br />
               <span style={{ color:'#555' }}>You can also pin your location manually by clicking or dragging on the map below.</span>
             </div>
@@ -423,9 +424,6 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
             <span>·</span>
             <span>Tap map or drag pin to change</span>
           </div>
-
-       
-         
         </div>
       )}
     </div>
