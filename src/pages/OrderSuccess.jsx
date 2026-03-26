@@ -67,7 +67,7 @@ export default function OrderSuccess() {
           </div>
 
           <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
-            <Link to="/shop" className="btn-primary" style={{ fontSize:14, padding:'12px 24px' }}>🛒 Continue Shopping</Link>
+     
             <Link to="/" className="btn-secondary" style={{ fontSize:14, padding:'12px 24px' }}>🏠 Back to Home</Link>
           </div>
         </div>
