@@ -565,7 +565,7 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
                   </ol>
                   <div className="lp-manual-note">
                     <span>💡</span>
-                    <span>After updating settings, refresh the page and tap the <strong>"Use My Current Location"</strong> button again. Or simply drag the red pin on the map to your location.</span>
+                    <span>After updating settings, refr and tap the <strong>"Use My Current Location"</strong> button again. Or simply drag the red pin on the map to your location.</span>
                   </div>
                 </div>
               )}
