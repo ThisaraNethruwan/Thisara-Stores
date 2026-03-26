@@ -70,7 +70,7 @@ function SplashScreen({ onDone, logoReady }) {
           background: '#fff',
         }}>
           <img
-            src="/public/logo-round.png"
+            src="/logo-round.png"
             alt="Thisara Stores"
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
@@ -155,7 +155,7 @@ function PageLoader() {
           boxShadow: '0 4px 16px rgba(30,102,65,0.18)',
           animation: 'loaderBounce 0.8s ease-in-out infinite alternate',
         }}>
-          <img src="/public/logo-round.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src="/logo-round.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
           {[0, 1, 2].map(i => (
@@ -186,14 +186,12 @@ export default function App() {
   const [splashDone, setSplashDone] = useState(false)
   const [logoReady, setLogoReady]   = useState(false)
 
-  // Preload /logo.png into the browser cache before splash animation starts.
-  // On deployed environments the image may not yet be cached on first load,
-  // so we wait for onload before triggering the animation.
+  // Preload logo into the browser cache before splash animation starts.
+  // Files in Vite's public/ folder are served from root (/), not /public/.
   useEffect(() => {
     const img = new Image()
-    img.src = '/public/logo-round.png'
+    img.src = '/logo-round.png'
     if (img.complete && img.naturalWidth > 0) {
-      // Already in browser cache
       setLogoReady(true)
     } else {
       img.onload  = () => setLogoReady(true)
