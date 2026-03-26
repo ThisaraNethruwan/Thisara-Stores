@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-const SHOP_LAT = 7.0278
-const SHOP_LNG = 79.9212
+const SHOP_LAT = 7.015468376212816
+const SHOP_LNG = 79.91953996256439
 const DELIVERY_RATE_PER_KM = 70
 const FREE_DELIVERY_THRESHOLD = 10000
 const MIN_DELIVERY_FEE = 100
