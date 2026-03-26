@@ -82,17 +82,12 @@ export default function ReturnPolicy() {
           <p>Once your return request is approved, we will process the refund as follows:</p>
           <ul>
             <li><strong>Cash on Delivery orders:</strong> Cash refund at the time of replacement delivery, or bank transfer within 3–5 business days</li>
-            <li><strong>Card payments (PayHere):</strong> Refund to the original payment card within 7–14 business days, depending on your bank</li>
+            <li><strong>Card payments (PayHere):</strong> Refund to the original payment card within 1–3 business days, depending on your bank</li>
             <li><strong>Replacement:</strong> A replacement of the item may be offered at our discretion at no extra charge</li>
           </ul>
         </div>
 
-        <div className="policy-section">
-          <h2>6. Order Cancellations</h2>
-          <p>
-            Orders may be cancelled before dispatch by contacting us via WhatsApp. Once an order has been dispatched for delivery, cancellation is not possible. For prepaid (card payment) orders that are cancelled before dispatch, a full refund will be issued within 7–14 business days.
-          </p>
-        </div>
+  
 
         <div className="policy-section">
           <h2>7. Contact Us</h2>
