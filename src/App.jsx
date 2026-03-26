@@ -82,7 +82,7 @@ function SplashScreen({ onDone, logoReady }) {
           animation: logoReady ? 'orbit 1.6s linear infinite' : 'none',
         }}>
           <div style={{
-            width: 10, height: 10, borderRadius: '50%', background: '#1e6641',
+            width: 12, height: 20, borderRadius: '50%', background: '#1e6641',
             position: 'absolute', top: '50%', left: 0,
             transform: 'translateY(-50%)',
             boxShadow: '0 0 8px rgba(30,102,65,0.6)',
@@ -113,18 +113,12 @@ function SplashScreen({ onDone, logoReady }) {
 
       {/* Loading bar */}
       <div style={{
-        width: 120, height: 3, background: 'rgba(30,102,65,0.12)',
+        width: 120, height: 3,
         borderRadius: 99, overflow: 'hidden',
         opacity: phase === 'enter' ? 0 : 1,
         transition: 'opacity 0.4s ease 0.5s',
       }}>
-        <div style={{
-          height: '100%',
-          background: 'linear-gradient(90deg, #1e6641, #7ab648)',
-          borderRadius: 99,
-          animation: logoReady ? 'loadBar 1.8s ease forwards' : 'none',
-          animationDelay: '0.6s',
-        }} />
+      
       </div>
 
       <style>{`
@@ -136,10 +130,7 @@ function SplashScreen({ onDone, logoReady }) {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
-        @keyframes loadBar {
-          from { width: 0%; }
-          to   { width: 100%; }
-        }
+   
       `}</style>
     </div>
   )
