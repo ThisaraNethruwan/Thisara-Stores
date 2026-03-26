@@ -18,16 +18,18 @@ const ReturnPolicy    = lazy(() => import('./pages/ReturnPolicy'))
 const PrivacyPolicy   = lazy(() => import('./pages/PrivacyPolicy'))
 const TermsConditions = lazy(() => import('./pages/TermsConditions'))
 
-/* ─── Splash Screen (shown once on first app load) ─────────────────────── */
-function SplashScreen({ onDone }) {
+/* ─── Splash Screen ─────────────────────────────────────────────────────── */
+function SplashScreen({ onDone, logoReady }) {
   const [phase, setPhase] = useState('enter') // enter → pulse → exit
 
   useEffect(() => {
+    // Only start animation once logo is confirmed loaded in memory
+    if (!logoReady) return
     const t1 = setTimeout(() => setPhase('pulse'), 600)
     const t2 = setTimeout(() => setPhase('exit'),  2200)
     const t3 = setTimeout(() => onDone(),           2800)
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
-  }, [onDone])
+  }, [logoReady, onDone])
 
   return (
     <div style={{
@@ -42,30 +44,25 @@ function SplashScreen({ onDone }) {
       pointerEvents: 'none',
     }}>
 
-      {/* Decorative rings */}
       <div style={{ position: 'relative', width: 160, height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
 
         {/* Outer ring */}
         <div style={{
-          position: 'absolute', inset: 0,
-          borderRadius: '50%',
+          position: 'absolute', inset: 0, borderRadius: '50%',
           border: '2px solid rgba(30,102,65,0.15)',
-          animation: 'ringPulse 2s ease-in-out infinite',
+          animation: logoReady ? 'ringPulse 2s ease-in-out infinite' : 'none',
         }} />
 
         {/* Middle ring */}
         <div style={{
-          position: 'absolute', inset: 12,
-          borderRadius: '50%',
+          position: 'absolute', inset: 12, borderRadius: '50%',
           border: '2px solid rgba(30,102,65,0.25)',
-          animation: 'ringPulse 2s ease-in-out infinite 0.2s',
+          animation: logoReady ? 'ringPulse 2s ease-in-out infinite 0.2s' : 'none',
         }} />
 
         {/* Logo circle */}
         <div style={{
-          width: 120, height: 120,
-          borderRadius: '50%',
-          overflow: 'hidden',
+          width: 120, height: 120, borderRadius: '50%', overflow: 'hidden',
           boxShadow: '0 8px 32px rgba(30,102,65,0.22), 0 2px 8px rgba(0,0,0,0.10)',
           transform: phase === 'enter' ? 'scale(0.6)' : 'scale(1)',
           opacity: phase === 'enter' ? 0 : 1,
@@ -81,16 +78,12 @@ function SplashScreen({ onDone }) {
 
         {/* Orbiting dot */}
         <div style={{
-          position: 'absolute', inset: -4,
-          borderRadius: '50%',
-          animation: 'orbit 1.6s linear infinite',
+          position: 'absolute', inset: -4, borderRadius: '50%',
+          animation: logoReady ? 'orbit 1.6s linear infinite' : 'none',
         }}>
           <div style={{
-            width: 10, height: 10,
-            borderRadius: '50%',
-            background: '#1e6641',
-            position: 'absolute',
-            top: '50%', left: 0,
+            width: 10, height: 10, borderRadius: '50%', background: '#1e6641',
+            position: 'absolute', top: '50%', left: 0,
             transform: 'translateY(-50%)',
             boxShadow: '0 0 8px rgba(30,102,65,0.6)',
           }} />
@@ -105,23 +98,14 @@ function SplashScreen({ onDone }) {
         transition: 'transform 0.6s ease 0.3s, opacity 0.6s ease 0.3s',
       }}>
         <div style={{
-          fontFamily: 'Fraunces, Georgia, serif',
-          fontWeight: 900,
-          fontSize: 26,
-          color: '#1e6641',
-          letterSpacing: '-0.5px',
-          lineHeight: 1.1,
+          fontFamily: 'Fraunces, Georgia, serif', fontWeight: 900,
+          fontSize: 26, color: '#1e6641', letterSpacing: '-0.5px', lineHeight: 1.1,
         }}>
           Thisara Stores
         </div>
         <div style={{
-          fontFamily: 'Nunito, sans-serif',
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: '3px',
-          color: '#7ab648',
-          textTransform: 'uppercase',
-          marginTop: 4,
+          fontFamily: 'Nunito, sans-serif', fontSize: 11, fontWeight: 700,
+          letterSpacing: '3px', color: '#7ab648', textTransform: 'uppercase', marginTop: 4,
         }}>
           Shop Online
         </div>
@@ -129,11 +113,8 @@ function SplashScreen({ onDone }) {
 
       {/* Loading bar */}
       <div style={{
-        width: 120,
-        height: 3,
-        background: 'rgba(30,102,65,0.12)',
-        borderRadius: 99,
-        overflow: 'hidden',
+        width: 120, height: 3, background: 'rgba(30,102,65,0.12)',
+        borderRadius: 99, overflow: 'hidden',
         opacity: phase === 'enter' ? 0 : 1,
         transition: 'opacity 0.4s ease 0.5s',
       }}>
@@ -141,14 +122,14 @@ function SplashScreen({ onDone }) {
           height: '100%',
           background: 'linear-gradient(90deg, #1e6641, #7ab648)',
           borderRadius: 99,
-          animation: 'loadBar 1.8s ease forwards',
+          animation: logoReady ? 'loadBar 1.8s ease forwards' : 'none',
           animationDelay: '0.6s',
         }} />
       </div>
 
       <style>{`
         @keyframes ringPulse {
-          0%, 100% { transform: scale(1);   opacity: 0.6; }
+          0%, 100% { transform: scale(1);    opacity: 0.6; }
           50%       { transform: scale(1.08); opacity: 1;   }
         }
         @keyframes orbit {
@@ -164,42 +145,30 @@ function SplashScreen({ onDone }) {
   )
 }
 
-/* ─── Page-level Suspense fallback (between route changes) ─────────────── */
+/* ─── Page-level Suspense fallback ──────────────────────────────────────── */
 function PageLoader() {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      minHeight: '60vh',
-    }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-        {/* Spinning logo */}
         <div style={{
-          width: 56, height: 56,
-          borderRadius: '50%',
-          overflow: 'hidden',
+          width: 56, height: 56, borderRadius: '50%', overflow: 'hidden',
           boxShadow: '0 4px 16px rgba(30,102,65,0.18)',
           animation: 'loaderBounce 0.8s ease-in-out infinite alternate',
         }}>
-          <img src="/public/logo-round.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src="/logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
-
-        {/* Dots */}
         <div style={{ display: 'flex', gap: 6 }}>
           {[0, 1, 2].map(i => (
             <div key={i} style={{
-              width: 6, height: 6,
-              borderRadius: '50%',
-              background: '#1e6641',
-              animation: `dotPop 0.9s ease-in-out infinite`,
-              animationDelay: `${i * 0.18}s`,
-              opacity: 0.4,
+              width: 6, height: 6, borderRadius: '50%', background: '#1e6641',
+              animation: 'dotPop 0.9s ease-in-out infinite',
+              animationDelay: `${i * 0.18}s`, opacity: 0.4,
             }} />
           ))}
         </div>
-
         <style>{`
           @keyframes loaderBounce {
-            from { transform: translateY(0);   box-shadow: 0 4px 16px rgba(30,102,65,0.18); }
+            from { transform: translateY(0);    box-shadow: 0 4px 16px rgba(30,102,65,0.18); }
             to   { transform: translateY(-8px); box-shadow: 0 12px 24px rgba(30,102,65,0.28); }
           }
           @keyframes dotPop {
@@ -215,26 +184,41 @@ function PageLoader() {
 /* ─── App ───────────────────────────────────────────────────────────────── */
 export default function App() {
   const [splashDone, setSplashDone] = useState(false)
+  const [logoReady, setLogoReady]   = useState(false)
+
+  // Preload /logo.png into the browser cache before splash animation starts.
+  // On deployed environments the image may not yet be cached on first load,
+  // so we wait for onload before triggering the animation.
+  useEffect(() => {
+    const img = new Image()
+    img.src = '/logo.png'
+    if (img.complete && img.naturalWidth > 0) {
+      // Already in browser cache
+      setLogoReady(true)
+    } else {
+      img.onload  = () => setLogoReady(true)
+      img.onerror = () => setLogoReady(true) // fail gracefully — show splash anyway
+    }
+  }, [])
 
   return (
     <AuthProvider>
       <CartProvider>
-        {!splashDone && <SplashScreen onDone={() => setSplashDone(true)} />}
+        {!splashDone && (
+          <SplashScreen
+            logoReady={logoReady}
+            onDone={() => setSplashDone(true)}
+          />
+        )}
 
-        <div style={{
-          opacity: splashDone ? 1 : 0,
-          transition: 'opacity 0.4s ease',
-        }}>
+        <div style={{ opacity: splashDone ? 1 : 0, transition: 'opacity 0.4s ease' }}>
           <BrowserRouter>
             <Toaster
               position="top-center"
               toastOptions={{
                 style: {
-                  fontFamily: 'Nunito, sans-serif',
-                  borderRadius: '12px',
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  maxWidth: '380px',
+                  fontFamily: 'Nunito, sans-serif', borderRadius: '12px',
+                  fontWeight: 600, fontSize: '14px', maxWidth: '380px',
                 },
                 success: {
                   style: { background: '#1e6641', color: '#fff' },
@@ -250,18 +234,18 @@ export default function App() {
             <Navbar />
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/"               element={<Home />} />
-                <Route path="/shop"           element={<Shop />} />
-                <Route path="/cart"           element={<Cart />} />
-                <Route path="/order-success"  element={<OrderSuccess />} />
-                <Route path="/about"          element={<About />} />
-                <Route path="/admin"          element={<Navigate to="/admin/login" replace />} />
-                <Route path="/admin/login"    element={<AdminLogin />} />
+                <Route path="/"                element={<Home />} />
+                <Route path="/shop"            element={<Shop />} />
+                <Route path="/cart"            element={<Cart />} />
+                <Route path="/order-success"   element={<OrderSuccess />} />
+                <Route path="/about"           element={<About />} />
+                <Route path="/admin"           element={<Navigate to="/admin/login" replace />} />
+                <Route path="/admin/login"     element={<AdminLogin />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                <Route path="/return-policy"  element={<ReturnPolicy />} />
-                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-                <Route path="/terms"          element={<TermsConditions />} />
-                <Route path="*"              element={<Navigate to="/" replace />} />
+                <Route path="/return-policy"   element={<ReturnPolicy />} />
+                <Route path="/privacy-policy"  element={<PrivacyPolicy />} />
+                <Route path="/terms"           element={<TermsConditions />} />
+                <Route path="*"               element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
             <Footer />
