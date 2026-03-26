@@ -47,7 +47,6 @@ export default function TermsConditions() {
           <h2>2. Ordering</h2>
           <ul>
             <li>Orders are placed through our website by adding items to your cart and completing the checkout form</li>
-            <li>All orders are confirmed via <strong>WhatsApp</strong> — you will receive a confirmation message after placing your order</li>
             <li>We reserve the right to cancel or refuse any order at our discretion, for example if an item is out of stock or the delivery location is outside our service area</li>
             <li>Prices displayed on the website are in <strong>Sri Lankan Rupees (LKR)</strong> and are inclusive of all applicable charges unless stated otherwise</li>
             <li>Product availability and prices may change without prior notice</li>
@@ -91,7 +90,6 @@ export default function TermsConditions() {
           <ul>
             <li>You may cancel your order by contacting us via WhatsApp <strong>before the order is dispatched</strong></li>
             <li>Once dispatched, cancellation is not possible</li>
-            <li>For prepaid card orders cancelled before dispatch, a full refund will be issued within 7–14 business days</li>
           </ul>
         </div>
 
