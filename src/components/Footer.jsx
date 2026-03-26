@@ -68,7 +68,7 @@ export default function Footer() {
                 ['📍', SHOP_ADDRESS],
                 ['📞', <a key="p" href={`tel:${OWNER_PHONE}`} style={{ color:'#52b788', textDecoration:'none' }}>{OWNER_PHONE}</a>],
                 ['🕐', SHOP_HOURS],
-                ['🚚', 'Delivery across Ragama, Kandana, Ja-Ela & more'],
+                ['🚚', 'Delivery across Ragama, Kandana & more'],
               ].map(([icon, text], i) => (
                 <div key={i} style={{ display:'flex', gap:10, color:'#8aab98', fontSize:13, lineHeight:1.6 }}>
                   <span style={{ flexShrink:0, fontSize:15 }}>{icon}</span>
