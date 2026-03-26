@@ -228,12 +228,7 @@ export default function Cart() {
         .pm-btn.active .pm-btn-label{color:#1e6641}
         .info-box{border-radius:12px;padding:11px 14px;font-size:13px;font-weight:600;margin-bottom:18px;display:flex;gap:8px;align-items:flex-start;line-height:1.6}
         .info-green{background:#f0fff4;border:1.5px solid #86efac;color:#166534}
-        .info-coming-soon{background:#fdf4ff;border:1.5px solid #e9d5ff;color:#6b21a8}
-        .coming-soon-box{background:#ffffff;
-        border:2px solid #083982;
-        border-radius:14px;
-        padding:18px 16px;margin-bottom:18px;text-align:center}
-        .coming-soon-icon{font-size:36px;margin-bottom:8px}
+        .coming-soon-box{background:#ffffff;border:2px solid #083982;border-radius:14px;padding:18px 16px;margin-bottom:18px;text-align:center}
         .coming-soon-title{font-size:15px;font-weight:800;color:#083982;margin-bottom:4px}
         .coming-soon-desc{font-size:12px;color:#083982;line-height:1.6;font-weight:500}
         .coming-soon-badge{display:inline-flex;align-items:center;gap:5px;background:#d5e2ff;color:#083982;padding:4px 12px;border-radius:50px;font-size:11px;font-weight:800;margin-top:10px;letter-spacing:.4px}
@@ -242,9 +237,7 @@ export default function Cart() {
         .order-btn:disabled{background:#d1d5db!important;color:#9ca3af!important;cursor:not-allowed!important;transform:none!important;box-shadow:none!important}
         @media(max-width:900px){.cp-grid{grid-template-columns:1fr!important}.fc{position:static}}
         @media(max-width:540px){.ci{flex-wrap:wrap;gap:8px}.ci-ctrl{width:100%;justify-content:space-between}}
-      `}
-      background: #d5e2ff;
-      </style>
+      `}</style>
 
       <main className="cp">
         <div className="cp-hdr">
