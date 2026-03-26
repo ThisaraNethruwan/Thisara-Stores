@@ -52,10 +52,8 @@ export default function Shop() {
     if (c) setActiveCat(c)
   }, [searchParams])
 
-  // Initial load
   useEffect(() => { loadAll() }, [])
 
-  // Realtime products listener
   useEffect(() => {
     const q = query(collection(db, 'products'), where('active', '==', true), orderBy('category'))
     const unsub = onSnapshot(q, (snap) => {
@@ -67,7 +65,6 @@ export default function Shop() {
     return () => unsub()
   }, [])
 
-  // Realtime categories listener
   useEffect(() => {
     const q = query(collection(db, 'categories'), orderBy('sort_order'))
     const unsub = onSnapshot(q, (snap) => {
@@ -165,6 +162,11 @@ export default function Shop() {
         .sp-cat-menu { position:absolute; top:calc(100% + 10px); right:0; background:#fff; border-radius:18px; box-shadow:0 16px 48px rgba(0,0,0,.18); min-width:240px; z-index:999; overflow:hidden; animation:dropIn .18s ease; }
         @keyframes dropIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
         .sp-cat-menu-inner { padding:8px; max-height:360px; overflow-y:auto; }
+
+        /* ── Hide the category dropdown on mobile ── */
+        .sp-cat-dropdown-wrap { display:flex; }
+        @media(max-width:900px) { .sp-cat-dropdown-wrap { display:none !important; } }
+
         .sp-body { max-width:1440px; margin:0 auto; padding:28px 28px 100px; }
         .sp-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; gap:12px; flex-wrap:wrap; }
         .sp-count { font-size:15px; color:#333; font-weight:700; }
@@ -190,7 +192,6 @@ export default function Shop() {
           .sp-body { padding:16px 14px 100px; }
           .sp-grid { grid-template-columns:repeat(2,1fr); gap:12px; }
           .sp-fab { display:flex; }
-          .sp-cat-btn-text { display:none; }
         }
         @media(max-width:480px) { .sp-grid { gap:10px; } .sp-body { padding:12px 10px 100px; } }
       `}</style>
@@ -199,15 +200,25 @@ export default function Shop() {
         <div className="sp-hdr">
           <div className="sp-hdr-row">
             <div className="sp-title">🛒 Shop</div>
+
             <div className="sp-search">
               <span style={{ color:'rgba(255,255,255,.65)', fontSize:15 }}>🔍</span>
-              <input ref={searchRef} placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} />
-              {search && <button className="sp-search-clear" onClick={() => { setSearch(''); searchRef.current?.focus() }}>✕</button>}
+              <input
+                ref={searchRef}
+                placeholder="Search products..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              {search && (
+                <button className="sp-search-clear" onClick={() => { setSearch(''); searchRef.current?.focus() }}>✕</button>
+              )}
             </div>
-            <div style={{ position:'relative', flexShrink:0 }} ref={dropRef}>
+
+            {/* Category dropdown — hidden on mobile via CSS */}
+            <div className="sp-cat-dropdown-wrap" style={{ position:'relative', flexShrink:0 }} ref={dropRef}>
               <button type="button" className={`sp-cat-btn${dropOpen?' open':''}`} onClick={() => setDropOpen(o => !o)}>
                 <span style={{ fontSize:16 }}>{activeCatData?.emoji || '🛒'}</span>
-                <span className="sp-cat-btn-text">{activeCat}</span>
+                <span>{activeCat}</span>
                 <span className={`sp-cat-arrow${dropOpen?' open':''}`}>▼</span>
               </button>
               {dropOpen && (
@@ -229,11 +240,15 @@ export default function Shop() {
                 {loading ? '⏳ Loading...' : <>{filtered.length} <span style={{ color:'#888', fontWeight:500 }}>product{filtered.length!==1?'s':''}</span></>}
               </div>
               {activeCat !== 'All' && !loading && (
-                <div className="sp-badge">{activeCatData?.emoji} {activeCat}<button className="sp-badge-clear" onClick={() => setActiveCat('All')}>✕</button></div>
+                <div className="sp-badge">
+                  {activeCatData?.emoji} {activeCat}
+                  <button className="sp-badge-clear" onClick={() => setActiveCat('All')}>✕</button>
+                </div>
               )}
               {search && !loading && (
                 <div className="sp-badge" style={{ background:'linear-gradient(135deg,#eff6ff,#dbeafe)', color:'#1d4ed8', borderColor:'#bfdbfe' }}>
-                  🔍 "{search}"<button className="sp-badge-clear" style={{ color:'#1d4ed8' }} onClick={() => setSearch('')}>✕</button>
+                  🔍 "{search}"
+                  <button className="sp-badge-clear" style={{ color:'#1d4ed8' }} onClick={() => setSearch('')}>✕</button>
                 </div>
               )}
             </div>
