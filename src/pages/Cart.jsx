@@ -1,16 +1,15 @@
 import { useState, useCallback, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../components/CartContext'
-import { addOrder, db } from '../lib/firebase'
-import { updateDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { addOrder } from '../lib/firebase'
 import LocationPicker from '../components/LocationPicker'
 import { SHOP_NAME, DELIVERY_RATE_PER_KM, FREE_DELIVERY_THRESHOLD } from '../utils/constants'
 import toast from 'react-hot-toast'
 
 const EMOJI = {
-  'Rice & Grains':'🌾','Drinks & Beverages':'🥤','Spices & Dry Food':'🌶️',
-  'Vegetables & Fruits':'🥦','Dairy & Eggs':'🥛','Snacks & Biscuits':'🍪',
-  'Household & Cleaning':'🧴','Personal Care':'🧼',
+  'Rice & Grains': '🌾', 'Drinks & Beverages': '🥤', 'Spices & Dry Food': '🌶️',
+  'Vegetables & Fruits': '🥦', 'Dairy & Eggs': '🥛', 'Snacks & Biscuits': '🍪',
+  'Household & Cleaning': '🧴', 'Personal Care': '🧼',
 }
 
 const PAYHERE_MERCHANT_ID = import.meta.env.VITE_PAYHERE_MERCHANT_ID || ''
@@ -22,18 +21,18 @@ function loadPayHereSDK() {
     if (window.payhere && typeof window.payhere.startPayment === 'function') { resolve(); return }
     const old = document.querySelector(`script[src="${PAYHERE_SDK_URL}"]`)
     if (old) old.remove()
-    const script = document.createElement('script')
-    script.src  = PAYHERE_SDK_URL
-    script.type = 'text/javascript'
-    const timeout = setTimeout(() => { script.remove(); reject(new Error('PayHere SDK timed out')) }, 20000)
-    script.onload = () => {
+    const script    = document.createElement('script')
+    script.src      = PAYHERE_SDK_URL
+    script.type     = 'text/javascript'
+    const timeout   = setTimeout(() => { script.remove(); reject(new Error('PayHere SDK timed out')) }, 20000)
+    script.onload   = () => {
       clearTimeout(timeout)
       setTimeout(() => {
         if (window.payhere && typeof window.payhere.startPayment === 'function') resolve()
         else reject(new Error('PayHere SDK did not initialise'))
       }, 500)
     }
-    script.onerror = () => { clearTimeout(timeout); script.remove(); reject(new Error('Failed to load PayHere SDK')) }
+    script.onerror  = () => { clearTimeout(timeout); script.remove(); reject(new Error('Failed to load PayHere SDK')) }
     document.head.appendChild(script)
   })
 }
@@ -50,7 +49,7 @@ async function launchPayHere({ orderId, amount, customerName, customerPhone }) {
     const data = await res.json()
     if (!data.hash) throw new Error('Hash missing')
     hash = data.hash
-  } catch (err) { return { success: false, reason: 'error', message: 'Payment setup failed — please try again.' } }
+  } catch { return { success: false, reason: 'error', message: 'Payment setup failed — please try again.' } }
 
   return new Promise((resolve) => {
     window.payhere.onCompleted = (id) => resolve({ success: true, orderId: id })
@@ -83,16 +82,20 @@ async function sendTelegramNotification(payload) {
 export default function Cart() {
   const { cart, removeFromCart, updateQty, clearCart, total, count } = useCart()
   const navigate = useNavigate()
+
   const [form, setForm]             = useState({ name: '', phone: '', note: '' })
   const [location, setLocation]     = useState({ address: '', lat: null, lng: null, distKm: null, fee: null })
   const [errors, setErrors]         = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('cod')
 
-  const isLocalhost = useMemo(() => {
-    const h = window.location.hostname
-    return h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0'
-  }, [])
+  // ── Key trick: a stable, unique key per cart-page-mount so LocationPicker
+  //   always fully remounts when the user navigates to /cart — guaranteeing
+  //   GPS auto-trigger fires fresh every single time. ─────────────────────────
+  // We use useMemo with an empty dep array so it is created once per mount
+  // of Cart (i.e. new key every navigation to /cart).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const locationPickerKey = useMemo(() => `lp-${Date.now()}`, [])
 
   const deliveryFee = useMemo(() => {
     if (total >= FREE_DELIVERY_THRESHOLD) return 0
@@ -109,13 +112,15 @@ export default function Cart() {
     if (!phone) e.phone = 'Please enter your phone number'
     else if (!/^0\d{9}$/.test(phone)) e.phone = 'Enter valid Sri Lankan number (07XXXXXXXX)'
     if (!location.address.trim()) e.address = 'Please set your delivery location'
-    setErrors(e); return Object.keys(e).length === 0
+    setErrors(e)
+    return Object.keys(e).length === 0
   }
 
   const handleChange = e => {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
     setErrors(err => ({ ...err, [e.target.name]: undefined }))
   }
+
   const handleLocationSelect = useCallback((loc) => {
     setLocation(loc)
     setErrors(err => ({ ...err, address: undefined }))
@@ -155,7 +160,7 @@ export default function Cart() {
     try { await addOrder(payload) } catch (e) { console.error('Firebase error:', e) }
     await sendTelegramNotification(payload)
     clearCart()
-    toast.success('Order placed! We\'ll contact you shortly 🎉')
+    toast.success("Order placed! We'll contact you shortly 🎉")
     navigate('/order-success', { state: { name: form.name, orderId: id, method: 'cod' } })
     setSubmitting(false)
   }
@@ -165,13 +170,14 @@ export default function Cart() {
     handleCODOrder()
   }
 
+  // ── Empty cart screen ───────────────────────────────────────────────────────
   if (cart.length === 0) return (
-    <main style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'70vh', padding:24, background:'#fffbf0' }}>
-      <div style={{ textAlign:'center', maxWidth:360 }}>
-        <div style={{ fontSize:80, marginBottom:16 }}>🛒</div>
-        <h2 style={{ fontFamily:'Fraunces,serif', fontSize:30, fontWeight:900, marginBottom:12 }}>Your cart is empty</h2>
-        <p style={{ color:'#666', marginBottom:28, lineHeight:1.7 }}>Browse our fresh products and add items to your cart!</p>
-        <Link to="/shop" className="btn-primary" style={{ fontSize:16, padding:'14px 32px' }}>Browse Products →</Link>
+    <main style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '70vh', padding: 24, background: '#fffbf0' }}>
+      <div style={{ textAlign: 'center', maxWidth: 360 }}>
+        <div style={{ fontSize: 80, marginBottom: 16 }}>🛒</div>
+        <h2 style={{ fontFamily: 'Fraunces,serif', fontSize: 30, fontWeight: 900, marginBottom: 12 }}>Your cart is empty</h2>
+        <p style={{ color: '#666', marginBottom: 28, lineHeight: 1.7 }}>Browse our fresh products and add items to your cart!</p>
+        <Link to="/shop" className="btn-primary" style={{ fontSize: 16, padding: '14px 32px' }}>Browse Products →</Link>
       </div>
     </main>
   )
@@ -240,6 +246,7 @@ export default function Cart() {
       `}</style>
 
       <main className="cp">
+        {/* Header */}
         <div className="cp-hdr">
           <div className="cp-hdr-in">
             <h1>My Cart</h1>
@@ -249,12 +256,18 @@ export default function Cart() {
 
         <div className="cp-body">
           <div className="cp-grid">
-            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+
+            {/* ── Left column: cart items + totals ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div className="cp-card">
                 <div className="cp-card-hdr">
                   <h2>🛒 Order Items ({count})</h2>
-                  <button onClick={() => { if (window.confirm('Clear cart?')) clearCart() }} style={{ background:'none', border:'1.5px solid #e8ede9', color:'#888', padding:'5px 14px', borderRadius:50, fontSize:12, cursor:'pointer' }}>Clear All</button>
+                  <button
+                    onClick={() => { if (window.confirm('Clear cart?')) clearCart() }}
+                    style={{ background: 'none', border: '1.5px solid #e8ede9', color: '#888', padding: '5px 14px', borderRadius: 50, fontSize: 12, cursor: 'pointer' }}
+                  >Clear All</button>
                 </div>
+
                 <div className="items-list">
                   {cart.map(item => (
                     <div key={item.cartKey} className="ci">
@@ -270,7 +283,7 @@ export default function Cart() {
                       <div className="ci-ctrl">
                         <div className="qty-box">
                           <button className="qty-btn" onClick={() => updateQty(item.cartKey, item.qty - 1)}>−</button>
-                          <span style={{ fontWeight:800, fontSize:14, minWidth:18, textAlign:'center' }}>{item.qty}</span>
+                          <span style={{ fontWeight: 800, fontSize: 14, minWidth: 18, textAlign: 'center' }}>{item.qty}</span>
                           <button className="qty-btn" onClick={() => updateQty(item.cartKey, item.qty + 1)}>+</button>
                         </div>
                         <div className="ci-sub">Rs. {Number(item.subtotal).toLocaleString()}</div>
@@ -279,91 +292,164 @@ export default function Cart() {
                     </div>
                   ))}
                 </div>
+
+                {/* Delivery notice */}
                 {total >= FREE_DELIVERY_THRESHOLD ? (
-                  <div className="notice notice-free"><span>🎉</span><span>Free delivery on orders Rs. {FREE_DELIVERY_THRESHOLD.toLocaleString()}+!</span></div>
+                  <div className="notice notice-free">
+                    <span>🎉</span><span>Free delivery on orders Rs. {FREE_DELIVERY_THRESHOLD.toLocaleString()}+!</span>
+                  </div>
                 ) : !location.lat ? (
-                  <div className="notice notice-pending"><span>📍</span><span>Pin your location to see delivery fee (Rs. {DELIVERY_RATE_PER_KM}/km).</span></div>
+                  <div className="notice notice-pending">
+                    <span>📍</span><span>Pin your location to see delivery fee (Rs. {DELIVERY_RATE_PER_KM}/km).</span>
+                  </div>
                 ) : deliveryFee !== null ? (
-                  <div className="notice notice-has"><span>🚚</span><span>{location.distKm?.toFixed(1)} km · {deliveryFee === 0 ? 'Free delivery! 🎉' : `Rs. ${deliveryFee.toLocaleString()} delivery fee`}</span></div>
+                  <div className="notice notice-has">
+                    <span>🚚</span>
+                    <span>
+                      {location.distKm?.toFixed(1)} km · {deliveryFee === 0
+                        ? 'Free delivery! 🎉'
+                        : `Rs. ${deliveryFee.toLocaleString()} delivery fee`}
+                    </span>
+                  </div>
                 ) : null}
+
+                {/* Totals */}
                 <div className="totals">
                   <div className="trow">
                     <span>Subtotal</span>
-                    <span style={{ fontWeight:700 }}>Rs. {total.toLocaleString()}</span>
+                    <span style={{ fontWeight: 700 }}>Rs. {total.toLocaleString()}</span>
                   </div>
                   <div className="trow">
                     <span>Delivery fee</span>
-                    <span style={{ fontWeight:700 }}>
+                    <span style={{ fontWeight: 700 }}>
                       {total >= FREE_DELIVERY_THRESHOLD
-                        ? <span style={{ background:'#d8f3dc', color:'#1e6641', padding:'2px 10px', borderRadius:50, fontSize:11, fontWeight:800 }}>🎉 FREE</span>
+                        ? <span style={{ background: '#d8f3dc', color: '#1e6641', padding: '2px 10px', borderRadius: 50, fontSize: 11, fontWeight: 800 }}>🎉 FREE</span>
                         : deliveryFee !== null
                           ? `Rs. ${deliveryFee.toLocaleString()}`
-                          : <span style={{ color:'#b45309', fontSize:12 }}>📍 Pin location</span>}
+                          : <span style={{ color: '#b45309', fontSize: 12 }}>📍 Pin location</span>}
                     </span>
                   </div>
                   <div className="gtbox">
                     <div>
-                      <div style={{ fontSize:11, color:'rgba(255,255,255,.7)', marginBottom:2 }}>Grand Total</div>
-                      <div style={{ fontFamily:'Fraunces,serif', fontSize:24, fontWeight:900 }}>Rs. {grandTotal.toLocaleString()}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.7)', marginBottom: 2 }}>Grand Total</div>
+                      <div style={{ fontFamily: 'Fraunces,serif', fontSize: 24, fontWeight: 900 }}>
+                        Rs. {grandTotal.toLocaleString()}
+                      </div>
                     </div>
-                    <span style={{ fontSize:32 }}>💰</span>
+                    <span style={{ fontSize: 32 }}>💰</span>
                   </div>
                 </div>
               </div>
-              <Link to="/shop" style={{ color:'#1e6641', fontWeight:700, fontSize:14 }}>← Continue Shopping</Link>
+
+              <Link to="/shop" style={{ color: '#1e6641', fontWeight: 700, fontSize: 14 }}>← Continue Shopping</Link>
             </div>
 
+            {/* ── Right column: delivery form ── */}
             <div className="fc">
               <h2>📦 Delivery Details</h2>
+
               <div className="ff">
                 <label>Name *</label>
-                <input name="name" className={errors.name ? 'err' : ''} value={form.name} onChange={handleChange} placeholder="Your name" autoComplete="name" />
+                <input
+                  name="name"
+                  className={errors.name ? 'err' : ''}
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="Your name"
+                  autoComplete="name"
+                />
                 {errors.name && <div className="ferr">⚠️ {errors.name}</div>}
               </div>
+
               <div className="ff">
                 <label>Phone Number *</label>
-                <input name="phone" className={errors.phone ? 'err' : ''} value={form.phone} onChange={handleChange} placeholder="07XXXXXXXX" type="tel" inputMode="tel" autoComplete="tel" />
+                <input
+                  name="phone"
+                  className={errors.phone ? 'err' : ''}
+                  value={form.phone}
+                  onChange={handleChange}
+                  placeholder="07XXXXXXXX"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                />
                 {errors.phone && <div className="ferr">⚠️ {errors.phone}</div>}
               </div>
+
               <div className="ff">
-                <label>Delivery Location * <span style={{ fontSize:11, color:'#888', fontWeight:500 }}>(pin map or type)</span></label>
-                <LocationPicker onLocationSelect={handleLocationSelect} initialAddress={location.address} cartTotal={total} />
+                <label>
+                  Delivery Location *{' '}
+                  <span style={{ fontSize: 11, color: '#888', fontWeight: 500 }}>(pin map or type)</span>
+                </label>
+                {/*
+                  KEY: locationPickerKey is unique per Cart mount.
+                  This forces LocationPicker to fully unmount + remount every time
+                  the user navigates to /cart, so the GPS auto-trigger always fires
+                  fresh — regardless of browser, device, or permission setting.
+                */}
+                <LocationPicker
+                  key={locationPickerKey}
+                  onLocationSelect={handleLocationSelect}
+                  initialAddress={location.address}
+                  cartTotal={total}
+                />
                 {errors.address && <div className="ferr">⚠️ {errors.address}</div>}
               </div>
+
+              {/* Inline fee summary (shown once location + fee are known) */}
               {location.lat && deliveryFee !== null && deliveryFee > 0 && (
-                <div style={{ background:'#f0faf3', borderRadius:10, padding:'12px 14px', marginBottom:14, fontSize:13 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                    <span style={{ color:'#555' }}>Items</span>
-                    <span style={{ fontWeight:700 }}>Rs. {total.toLocaleString()}</span>
+                <div style={{ background: '#f0faf3', borderRadius: 10, padding: '12px 14px', marginBottom: 14, fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: '#555' }}>Items</span>
+                    <span style={{ fontWeight: 700 }}>Rs. {total.toLocaleString()}</span>
                   </div>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
-                    <span style={{ color:'#555' }}>Delivery ({location.distKm?.toFixed(1)} km)</span>
-                    <span style={{ fontWeight:700 }}>Rs. {deliveryFee.toLocaleString()}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ color: '#555' }}>Delivery ({location.distKm?.toFixed(1)} km)</span>
+                    <span style={{ fontWeight: 700 }}>Rs. {deliveryFee.toLocaleString()}</span>
                   </div>
-                  <div style={{ display:'flex', justifyContent:'space-between', borderTop:'1.5px solid #d8f3dc', paddingTop:6, marginTop:4 }}>
-                    <span style={{ fontWeight:800, color:'#1e6641' }}>Total</span>
-                    <span style={{ fontWeight:900, color:'#1e6641', fontSize:16 }}>Rs. {grandTotal.toLocaleString()}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1.5px solid #d8f3dc', paddingTop: 6, marginTop: 4 }}>
+                    <span style={{ fontWeight: 800, color: '#1e6641' }}>Total</span>
+                    <span style={{ fontWeight: 900, color: '#1e6641', fontSize: 16 }}>Rs. {grandTotal.toLocaleString()}</span>
                   </div>
                 </div>
               )}
+
               {total >= FREE_DELIVERY_THRESHOLD && (
-                <div style={{ background:'#d8f3dc', borderRadius:10, padding:'10px 14px', marginBottom:14, fontSize:13, color:'#1e6641', fontWeight:700, display:'flex', gap:6, alignItems:'center' }}>
+                <div style={{ background: '#d8f3dc', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#1e6641', fontWeight: 700, display: 'flex', gap: 6, alignItems: 'center' }}>
                   🎉 Free delivery applied!
                 </div>
               )}
+
               <div className="ff">
                 <label>Special Note (Optional)</label>
-                <input name="note" value={form.note} onChange={handleChange} placeholder="Any special requests..." />
+                <input
+                  name="note"
+                  value={form.note}
+                  onChange={handleChange}
+                  placeholder="Any special requests..."
+                />
               </div>
-              <div style={{ marginBottom:6 }}>
-                <label style={{ display:'block', fontSize:13, fontWeight:700, color:'#444', marginBottom:10 }}>Payment Method *</label>
+
+              {/* Payment method */}
+              <div style={{ marginBottom: 6 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#444', marginBottom: 10 }}>
+                  Payment Method *
+                </label>
                 <div className="pm-toggle">
-                  <button type="button" className={`pm-btn${paymentMethod === 'cod' ? ' active' : ''}`} onClick={() => setPaymentMethod('cod')}>
+                  <button
+                    type="button"
+                    className={`pm-btn${paymentMethod === 'cod' ? ' active' : ''}`}
+                    onClick={() => setPaymentMethod('cod')}
+                  >
                     <span className="pm-btn-icon">💵</span>
                     <span className="pm-btn-label">Cash on Delivery</span>
                     <span className="pm-btn-sub">Pay when delivered</span>
                   </button>
-                  <button type="button" className={`pm-btn${paymentMethod === 'card' ? ' active' : ''}`} onClick={() => setPaymentMethod('card')}>
+                  <button
+                    type="button"
+                    className={`pm-btn${paymentMethod === 'card' ? ' active' : ''}`}
+                    onClick={() => setPaymentMethod('card')}
+                  >
                     <span className="pm-btn-icon">💳</span>
                     <span className="pm-btn-label">Pay by Card</span>
                     <span className="pm-btn-sub">Visa / Mastercard</span>
@@ -380,11 +466,11 @@ export default function Cart() {
                     className="order-btn"
                     onClick={handleOrder}
                     disabled={submitting}
-                    style={{ background: submitting ? '#ccc' : '#086129', color:'#fff' }}
+                    style={{ background: submitting ? '#ccc' : '#086129', color: '#fff' }}
                   >
                     {submitting ? '⏳ Processing...' : `🛒 Place Order — Rs. ${grandTotal.toLocaleString()}`}
                   </button>
-                  <p style={{ fontSize:12, color:'#999', textAlign:'center', lineHeight:1.6 }}>
+                  <p style={{ fontSize: 12, color: '#999', textAlign: 'center', lineHeight: 1.6 }}>
                     We'll contact you to confirm your delivery 📞
                   </p>
                 </>
@@ -401,16 +487,17 @@ export default function Cart() {
                   <button
                     className="order-btn"
                     disabled={true}
-                    style={{ background:'#d1d5db', color:'#9ca3af' }}
+                    style={{ background: '#d1d5db', color: '#9ca3af' }}
                   >
                     💳 Pay by Card — Coming Soon
                   </button>
-                  <p style={{ fontSize:12, color:'#b45309', textAlign:'center', lineHeight:1.6, fontWeight:600 }}>
+                  <p style={{ fontSize: 12, color: '#b45309', textAlign: 'center', lineHeight: 1.6, fontWeight: 600 }}>
                     Please use Cash on Delivery for now 💵
                   </p>
                 </>
               )}
             </div>
+
           </div>
         </div>
       </main>
