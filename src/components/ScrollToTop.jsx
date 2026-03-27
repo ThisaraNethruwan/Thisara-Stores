@@ -4,24 +4,18 @@ import { useLocation } from 'react-router-dom'
 // ── Scroll to top on every route change ──────────────────────────────────────
 function RouteScrollReset() {
   const { pathname } = useLocation()
-
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
-
+  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
   return null
 }
 
-// ── Floating "back to top" button ─────────────────────────────────────────────
+// ── Floating back-to-top button ───────────────────────────────────────────────
 function BackToTopButton() {
   const [show, setShow] = useState(false)
-
   useEffect(() => {
     const h = () => setShow(window.scrollY > 400)
     window.addEventListener('scroll', h, { passive: true })
     return () => window.removeEventListener('scroll', h)
   }, [])
-
   return (
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -43,7 +37,6 @@ function BackToTopButton() {
   )
 }
 
-// ── Combined export ───────────────────────────────────────────────────────────
 export default function ScrollToTop() {
   return (
     <>
