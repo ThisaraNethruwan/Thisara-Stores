@@ -101,7 +101,6 @@ function DeliveryInfoModal({ grandTotal, onConfirm, onClose, submitting }) {
 
           {/* Tuesday notice */}
           <div className="dim-info-card dim-card-yellow">
-            <div className="dim-info-icon">📅</div>
             <div className="dim-info-body">
               <div className="dim-info-title">Tuesday Schedule</div>
               <div className="dim-info-badge dim-badge-yellow">No Deliveries on Tuesdays</div>
@@ -114,7 +113,6 @@ function DeliveryInfoModal({ grandTotal, onConfirm, onClose, submitting }) {
 
           {/* Timing notice */}
           <div className="dim-info-card dim-card-green">
-            <div className="dim-info-icon">⏰</div>
             <div className="dim-info-body">
               <div className="dim-info-title">Delivery Timing</div>
               <div className="dim-info-badge dim-badge-green">All Deliveries After 5:00 PM</div>
