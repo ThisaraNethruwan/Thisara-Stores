@@ -184,7 +184,6 @@ export default function Home() {
             inset 0 1px 0 rgba(255,255,255,.4);
           border: 2px solid rgba(255,255,255,.35);
         }
-        /* Ribbon tail bottom-left */
         .h-fd-tag-inner::after {
           content: '';
           position: absolute;
@@ -241,7 +240,6 @@ export default function Home() {
           letter-spacing: 0.8px;
           text-transform: uppercase;
         }
-        /* Sparkle dots */
         .h-fd-sparkle {
           position: absolute;
           border-radius: 50%;
@@ -255,6 +253,127 @@ export default function Home() {
           0%,100% { transform:scale(0); opacity:0; }
           50%      { transform:scale(1); opacity:1; }
         }
+
+        /* ── DELIVERY NOTICE BANNER ── */
+        .h-delivery-notice {
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+          border-radius: 20px;
+          padding: 22px 24px;
+          margin: 28px 0 0;
+          border: 1.5px solid rgba(255,255,255,0.15);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+          position: relative;
+          overflow: hidden;
+        }
+        .h-delivery-notice::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #f4a322, #e63946, #f4a322);
+          background-size: 200% 100%;
+          animation: shimmerBar 3s linear infinite;
+        }
+        @keyframes shimmerBar {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+        .h-delivery-notice-title {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 14px;
+        }
+        .h-delivery-notice-title-icon {
+          font-size: 20px;
+          animation: bellShake 2.5s ease-in-out infinite;
+          display: inline-block;
+        }
+        @keyframes bellShake {
+          0%,90%,100% { transform: rotate(0deg); }
+          92% { transform: rotate(-12deg); }
+          94% { transform: rotate(12deg); }
+          96% { transform: rotate(-8deg); }
+          98% { transform: rotate(8deg); }
+        }
+        .h-delivery-notice-title span {
+          font-family: 'Fraunces', serif;
+          font-size: 15px;
+          font-weight: 900;
+          color: #fff;
+          letter-spacing: 0.3px;
+          text-transform: uppercase;
+        }
+        .h-delivery-notice-title .badge {
+          background: #e63946;
+          color: #fff;
+          font-size: 10px;
+          font-weight: 800;
+          padding: 3px 9px;
+          border-radius: 50px;
+          letter-spacing: 0.6px;
+          font-family: 'Nunito', sans-serif;
+          animation: pulseBadge 2s ease-in-out infinite;
+        }
+        @keyframes pulseBadge {
+          0%,100% { transform: scale(1); }
+          50% { transform: scale(1.07); }
+        }
+        .h-delivery-rules {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        .h-delivery-rule-card {
+          border-radius: 14px;
+          padding: 14px 16px;
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          border: 1.5px solid rgba(255,255,255,0.12);
+          transition: transform 0.2s;
+        }
+        .h-delivery-rule-card:hover { transform: translateY(-1px); }
+        .h-delivery-rule-card.tuesday {
+          background: rgba(230, 57, 70, 0.18);
+          border-color: rgba(230, 57, 70, 0.4);
+        }
+        .h-delivery-rule-card.timing {
+          background: rgba(244, 163, 34, 0.18);
+          border-color: rgba(244, 163, 34, 0.4);
+        }
+        .h-delivery-rule-icon {
+          font-size: 28px;
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+        .h-delivery-rule-content {}
+        .h-delivery-rule-label {
+          font-family: 'Nunito', sans-serif;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 0.8px;
+          text-transform: uppercase;
+          margin-bottom: 4px;
+        }
+        .h-delivery-rule-card.tuesday .h-delivery-rule-label { color: #ff8a95; }
+        .h-delivery-rule-card.timing .h-delivery-rule-label { color: #fcd34d; }
+        .h-delivery-rule-title {
+          font-family: 'Fraunces', serif;
+          font-size: 15px;
+          font-weight: 900;
+          color: #fff;
+          margin-bottom: 4px;
+          line-height: 1.2;
+        }
+        .h-delivery-rule-desc {
+          font-family: 'Nunito', sans-serif;
+          font-size: 12px;
+          font-weight: 600;
+          line-height: 1.5;
+        }
+        .h-delivery-rule-card.tuesday .h-delivery-rule-desc { color: rgba(255,180,185,0.9); }
+        .h-delivery-rule-card.timing .h-delivery-rule-desc { color: rgba(253,220,150,0.9); }
 
         /* ── HERO ── */
         .h-hero { background:linear-gradient(135deg,#0f2d1c 0%,#1a3d28 40%,#1e6641 100%); position:relative; overflow:hidden; }
@@ -339,12 +458,15 @@ export default function Home() {
           .h-steps-grid { grid-template-columns:repeat(2,1fr); }
           .h-step-arr { display:none; }
           .h-reviews-hdr { flex-direction:column; align-items:center; text-align:center; }
+          .h-delivery-rules { grid-template-columns: 1fr; }
         }
         @media(max-width:640px) {
           .h-cats-grid { grid-template-columns:repeat(3,1fr); }
           .h-btn-white, .h-btn-ghost { padding:10px 20px; font-size:13px; }
-          /* On mobile img-col is hidden, so hide tag too */
           .h-fd-tag { display: none; }
+          .h-delivery-notice { padding: 16px; }
+          .h-delivery-rule-card { padding: 12px 14px; }
+          .h-delivery-rule-title { font-size: 14px; }
         }
         @media(max-width:480px) {
           .h-feat-grid { grid-template-columns:1fr 1fr; }
@@ -358,7 +480,7 @@ export default function Home() {
           <div className="h-hero-glow" />
           <div className="h-hero-inner">
             <div className="h-hero-text">
-              <div className="h-hero-badge fade-up">🏪 {SHOP_NAME} — {SHOP_AREA}</div>
+              <div className="h-hero-badge fade-up"> {SHOP_NAME} — {SHOP_AREA}</div>
               <h1 className="h-hero-title fade-up-2">
                 Neighbourhood<br />
                 Grocery Store,<br />
@@ -376,7 +498,8 @@ export default function Home() {
                   <div key={l}><div className="h-trust-n">{n}</div><div className="h-trust-l">{l}</div></div>
                 ))}
               </div>
-              {/* Mobile free delivery tag — shown only on mobile since img-col is hidden */}
+
+              {/* Mobile free delivery tag */}
               <div style={{
                 display:'inline-flex', alignItems:'center', gap:8,
                 background:'linear-gradient(135deg,#f4a322,#f59e0b)',
@@ -393,12 +516,12 @@ export default function Home() {
                 <span style={{ fontSize:14 }}>🎉</span>
               </div>
 
+
               <div className="h-hero-img-mobile">
                 {HERO_IMAGE_URL && <img src={HERO_IMAGE_URL} alt="Fresh groceries delivery" loading="lazy" />}
               </div>
             </div>
             <div className="h-hero-img-col">
-             
               {HERO_IMAGE_URL && <img src={HERO_IMAGE_URL} alt="Fresh groceries delivery" loading="eager" />}
             </div>
           </div>
