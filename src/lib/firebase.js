@@ -8,7 +8,7 @@ import {
   serverTimestamp, Timestamp,
 } from 'firebase/firestore'
 
-// ── Your Firebase config (from Firebase Console) ─────────────────────────────
+// ── Firebase config ───────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -18,9 +18,21 @@ const firebaseConfig = {
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-const app     = initializeApp(firebaseConfig)
-export const auth    = getAuth(app)
-export const db      = getFirestore(app)
+// ── Startup env validation (dev only) ────────────────────────────────────────
+if (import.meta.env.DEV) {
+  const required = [
+    'VITE_FIREBASE_API_KEY','VITE_FIREBASE_AUTH_DOMAIN','VITE_FIREBASE_PROJECT_ID',
+    'VITE_FIREBASE_STORAGE_BUCKET','VITE_FIREBASE_MESSAGING_SENDER_ID','VITE_FIREBASE_APP_ID',
+  ]
+  const missing = required.filter(k => !import.meta.env[k])
+  if (missing.length > 0) {
+    console.error('[Firebase] Missing env vars:', missing.join(', '))
+  }
+}
+
+const app        = initializeApp(firebaseConfig)
+export const auth = getAuth(app)
+export const db   = getFirestore(app)
 
 // ── Collection references ─────────────────────────────────────────────────────
 export const colProducts   = () => collection(db, 'products')
@@ -51,7 +63,6 @@ export function invalidateCache(key) {
 export function docToObj(snap) {
   if (!snap.exists()) return null
   const data = snap.data()
-  // Convert Timestamps to ISO strings for consistency
   const cleaned = {}
   for (const [k, v] of Object.entries(data)) {
     if (v instanceof Timestamp) cleaned[k] = v.toDate().toISOString()
@@ -66,7 +77,6 @@ export function docsToArr(snap) {
 
 // ── PRODUCTS ──────────────────────────────────────────────────────────────────
 export async function fetchProducts() {
-  // Only filter — sort in JS to avoid composite index requirement
   const q = query(colProducts(), where('active', '==', true))
   const snap = await getDocs(q)
   const all = docsToArr(snap)
@@ -112,7 +122,12 @@ export async function deleteCategory(id) {
 
 // ── ORDERS ────────────────────────────────────────────────────────────────────
 export async function addOrder(data) {
-  return addDoc(colOrders(), { ...data, status: 'pending', createdAt: serverTimestamp(), updatedAt: serverTimestamp() })
+  return addDoc(colOrders(), {
+    ...data,
+    status: 'pending',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  })
 }
 
 export async function fetchOrders() {
@@ -125,13 +140,16 @@ export async function updateOrderStatus(id, status) {
   return updateDoc(doc(db, 'orders', id), { status, updatedAt: serverTimestamp() })
 }
 
+export async function deleteOrder(id) {
+  return deleteDoc(doc(db, 'orders', id))
+}
+
 // ── REVIEWS ───────────────────────────────────────────────────────────────────
 export async function addReview(data) {
   return addDoc(colReviews(), { ...data, approved: false, createdAt: serverTimestamp() })
 }
 
 export async function fetchApprovedReviews() {
-  // Only filter by approved — sort in JS to avoid composite index requirement
   const q = query(colReviews(), where('approved', '==', true))
   const snap = await getDocs(q)
   const all = docsToArr(snap)
@@ -163,9 +181,18 @@ export async function checkIsAdmin(uid) {
   } catch { return false }
 }
 
-export { onSnapshot, doc, db as firestore, query, colOrders as ordersCol, orderBy, serverTimestamp }
+// ── Re-exports ────────────────────────────────────────────────────────────────
+export {
+  onSnapshot,
+  doc,
+  db as firestore,
+  query,
+  colOrders as ordersCol,
+  orderBy,
+  serverTimestamp,
+}
 
-// ── Cloudinary image upload (no Firebase Storage needed) ─────────────────────
+// ── Cloudinary image upload ───────────────────────────────────────────────────
 export async function uploadToCloudinary(file) {
   const cloudName    = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
   const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
@@ -190,5 +217,5 @@ export async function uploadToCloudinary(file) {
   }
 
   const data = await res.json()
-  return data.secure_url  // permanent HTTPS URL
+  return data.secure_url
 }
