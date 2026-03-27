@@ -4,10 +4,10 @@ import { useCart } from './CartContext'
 import { SHOP_NAME } from '../utils/constants'
 
 export default function Navbar() {
-  const { count }                 = useCart()
-  const [open, setOpen]           = useState(false)
-  const [scrolled, setScrolled]   = useState(false)
-  const loc                       = useLocation()
+  const { count }               = useCart()
+  const [open, setOpen]         = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+  const loc                     = useLocation()
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 20)
@@ -19,7 +19,6 @@ export default function Navbar() {
 
   const isActive = to => to === '/' ? loc.pathname === '/' : loc.pathname.startsWith(to)
 
-  // Admin dashboard has its own sidebar nav — hide Navbar there
   if (loc.pathname.startsWith('/admin/dashboard')) return null
 
   const LINKS = [
@@ -45,6 +44,7 @@ export default function Navbar() {
           height:64px; padding:0 20px; gap:12px;
         }
         .nav-logo { display:flex; align-items:center; gap:10px; flex-shrink:0; text-decoration:none; }
+        .nav-logo img { width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid #d8f3dc; flex-shrink:0; }
         .nav-logo-name { font-family:'Fraunces',serif; font-size:19px; font-weight:900; color:#1e6641; line-height:1.1; }
         .nav-logo-sub { font-size:10px; color:#6b7c74; letter-spacing:.4px; }
         .nav-links { display:flex; gap:2px; }
@@ -89,6 +89,7 @@ export default function Navbar() {
           border-bottom:1px solid #f0faf3; transition:background .15s;
         }
         .nav-mobile-link:hover, .nav-mobile-link.active { color:#1e6641; background:#f0faf3; }
+        @keyframes popIn { from{opacity:0;transform:scale(.7)} to{opacity:1;transform:scale(1)} }
         @media(max-width:750px) {
           .nav-links { display:none; }
           .nav-cart span.cart-label { display:none; }
@@ -99,16 +100,14 @@ export default function Navbar() {
 
       <nav className="nav-wrap">
         <div className="nav-inner">
-          {/* Logo */}
           <Link to="/" className="nav-logo">
-            <span style={{ fontSize: 26 }}>🏪</span>
+            <img src="/logo-round.png" alt={SHOP_NAME} />
             <div>
               <div className="nav-logo-name">{SHOP_NAME}</div>
               <div className="nav-logo-sub">Ragama, Sri Lanka</div>
             </div>
           </Link>
 
-          {/* Desktop links */}
           <div className="nav-links">
             {LINKS.map(l => (
               <Link key={l.to} to={l.to} className={`nav-link${isActive(l.to) ? ' active' : ''}`}>
@@ -117,15 +116,12 @@ export default function Navbar() {
             ))}
           </div>
 
-          {/* Right side — cart only */}
           <div className="nav-right">
             <Link to="/cart" className="nav-cart">
               <span>🛒</span>
               <span className="cart-label">Cart</span>
               {count > 0 && <span className="nav-cart-badge">{count > 99 ? '99+' : count}</span>}
             </Link>
-
-            {/* Hamburger */}
             <button className="nav-burger" onClick={() => setOpen(o => !o)} aria-label="Menu">
               {[0, 1, 2].map(i => (
                 <span key={i} style={{
@@ -140,7 +136,6 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile menu */}
         <div className={`nav-mobile${open ? ' open' : ''}`}>
           {LINKS.map(l => (
             <Link key={l.to} to={l.to} className={`nav-mobile-link${isActive(l.to) ? ' active' : ''}`}>
