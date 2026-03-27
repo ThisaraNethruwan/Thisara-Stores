@@ -22,17 +22,16 @@ export default function AdminLogin() {
     setBusy(false)
     if (error) { toast.error('Invalid email or password'); return }
     if (!u) return
-    // useEffect will redirect if admin — if not admin show error
     setTimeout(() => {
       if (!isAdmin) toast.error('Access denied. Admin accounts only.')
     }, 500)
   }
 
   if (authLoading) return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', background:'#0f2d1c' }}>
-      <div style={{ textAlign:'center' }}>
-        <div style={{ fontSize:40, animation:'spin 1s linear infinite', display:'inline-block', marginBottom:12 }}>🌿</div>
-        <div style={{ color:'#52b788', fontSize:14, fontFamily:'Nunito,sans-serif' }}>Loading...</div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0f2d1c' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: 40, animation: 'spin 1s linear infinite', display: 'inline-block', marginBottom: 12 }}>🌿</div>
+        <div style={{ color: '#52b788', fontSize: 14, fontFamily: 'Nunito,sans-serif' }}>Loading...</div>
       </div>
     </div>
   )
@@ -40,10 +39,11 @@ export default function AdminLogin() {
   return (
     <>
       <style>{`
+        footer { display: none !important; }
         .adm-login { min-height:100vh; background:linear-gradient(135deg,#0f2d1c,#1a3d28); display:flex; align-items:center; justify-content:center; padding:24px; }
         .adm-login-card { background:#fff; border-radius:24px; width:100%; max-width:400px; overflow:hidden; box-shadow:0 24px 80px rgba(0,0,0,.4); animation:popIn .3s ease; }
-        .adm-login-top { background:linear-gradient(135deg,#0f2d1c,#1e6641); padding:36px 28px 28px; text-align:center; }
-        .adm-login-body { padding:28px 28px 32px; }
+        .adm-login-top { background:linear-gradient(135deg,#0f2d1c,#1e6641); padding:30px 18px 6px; text-align:center; }
+        .adm-login-body { padding:23px 20px 12px; }
         .alf { margin-bottom:16px; }
         .alf label { display:block; font-size:13px; font-weight:700; color:#444; margin-bottom:6px; }
         .alf-wrap { position:relative; }
@@ -54,14 +54,25 @@ export default function AdminLogin() {
         .adm-login-btn:hover:not(:disabled) { background:#2d8653; transform:translateY(-1px); }
         .adm-login-btn:disabled { background:#ccc; cursor:not-allowed; }
         @keyframes popIn { from{opacity:0;transform:scale(.93)} to{opacity:1;transform:scale(1)} }
-        @keyframes spin { to{transform:rotate(360deg)} }
+        @keyframes spin   { to{transform:rotate(360deg)} }
       `}</style>
       <main className="adm-login">
         <div className="adm-login-card">
           <div className="adm-login-top">
-            <div style={{ fontSize:44, marginBottom:12 }}>🏪</div>
-            <div style={{ fontFamily:'Fraunces,serif', fontSize:24, fontWeight:900, color:'#fff', marginBottom:4 }}>Thisara Stores</div>
-            <div style={{ fontSize:13, color:'rgba(255,255,255,.7)' }}>Admin Panel — Sign In</div>
+            
+            {/* Flex container to hold Logo and Header in a single line */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 12 }}>
+              <img 
+                src="/logo-round.png" 
+                alt="Thisara Stores" 
+                style={{ width: 62, height: 62, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(255,255,255,.3)' }} 
+              />
+              <div style={{ fontFamily: 'Fraunces,serif', fontSize: 28, fontWeight: 900, color: '#fff' }}>
+                Thisara Stores
+              </div>
+            </div>
+
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,.7)' }}>Admin Only</div>
           </div>
           <div className="adm-login-body">
             <div className="alf">
@@ -70,18 +81,18 @@ export default function AdminLogin() {
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@example.com" autoComplete="email" onKeyDown={e => e.key === 'Enter' && handleLogin()} />
               </div>
             </div>
-            <div className="alf" style={{ marginBottom:20 }}>
+            <div className="alf" style={{ marginBottom: 20 }}>
               <label>Password</label>
               <div className="alf-wrap">
-                <input type={showPw?'text':'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" onKeyDown={e => e.key === 'Enter' && handleLogin()} />
-                <button className="alf-eye" onClick={() => setShowPw(v => !v)} type="button">{showPw?'🙈':'👁️'}</button>
+                <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" autoComplete="current-password" onKeyDown={e => e.key === 'Enter' && handleLogin()} style={{ paddingRight: 46 }} />
+                <button className="alf-eye" onClick={() => setShowPw(v => !v)} type="button">{showPw ? '🙈' : '👁️'}</button>
               </div>
             </div>
             <button className="adm-login-btn" onClick={handleLogin} disabled={busy}>
               {busy ? '⏳ Signing in...' : '🔐 Sign In to Dashboard'}
             </button>
-            <p style={{ textAlign:'center', fontSize:12, color:'#aaa', marginTop:20, lineHeight:1.6 }}>
-              Admin access only.<br />Customers do not need an account to shop.
+            <p style={{ textAlign: 'center', fontSize: 12, color: '#aaa', marginTop: 20, lineHeight: 1.6 }}>
+              Admin access only.
             </p>
           </div>
         </div>
