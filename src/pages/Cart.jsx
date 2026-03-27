@@ -705,12 +705,7 @@ export default function Cart() {
                   </div>
                 ) : deliveryFee !== null ? (
                   <div className="notice notice-has">
-                    <span>🚚</span>
-                    <span>
-                      {location.distKm?.toFixed(1)} km away · {deliveryFee === 0
-                        ? 'Free delivery — enjoy! 🎉'
-                        : `Delivery fee: Rs. ${deliveryFee.toLocaleString()}`}
-                    </span>
+               
                   </div>
                 ) : null}
 
@@ -875,11 +870,11 @@ export default function Cart() {
                 <>
                   <div className="coming-soon-box">
                     <div className="coming-soon-title">Card Payment Coming Soon</div>
-                    <div className="coming-soon-desc">
+                    <div className="coming-soon-desc"><strong>Online card payment feature is currently under development.</strong>
                       We're working hard to bring you a secure and seamless online payment experience.
-                      In the meantime, please use Cash on Delivery — we appreciate your patience!
+                      please use Cash on Delivery for now.
                     </div>
-                    <span className="coming-soon-badge">⚙️ Coming Soon</span>
+                    <span className="coming-soon-badge">Coming Soon</span>
                   </div>
                   <button className="order-btn" disabled style={{ background: '#d1d5db', color: '#9ca3af' }}>
                     💳 Card Payment — Coming Soon
