@@ -40,9 +40,6 @@ export function buildWhatsAppMessage(order) {
   )
 }
 
-// Opens WhatsApp without navigating away from the app.
-// Uses a hidden <a> clicked programmatically — works on all browsers
-// and triggers the WhatsApp app on mobile (iOS/Android).
 export function openWhatsApp(message) {
   const url = `https://wa.me/${OWNER_WHATSAPP}?text=${encodeURIComponent(message)}`
   const a   = document.createElement('a')
