@@ -855,9 +855,8 @@ export default function Cart() {
               {paymentMethod === 'cod' ? (
                 <>
                   <div className="info-box info-green">
-                    <span>💚</span>
                     <span>
-                      Your order will be confirmed right away, and we'll give you a call to arrange delivery!
+                      Your order will be confirmed right away and delivered to your doorstep!
                     </span>
                   </div>
                   <button
