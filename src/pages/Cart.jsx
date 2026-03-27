@@ -98,16 +98,7 @@ function CardComingSoonModal({ onClose }) {
 
           <div className="csm-divider" />
 
-          {/* Progress bar */}
-          <div className="csm-progress-wrap">
-            <div className="csm-progress-label">
-              <span>Development progress</span>
-              <span className="csm-progress-pct">72%</span>
-            </div>
-            <div className="csm-progress-track">
-              <div className="csm-progress-fill" />
-            </div>
-          </div>
+
 
           <button className="csm-btn-ok" onClick={onClose}>
             Got it — use Cash on Delivery
