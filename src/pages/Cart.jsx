@@ -627,7 +627,7 @@ export default function Cart() {
                 {submitting
                   ? '⏳ Processing your order…'
                   : paymentMethod === 'card'
-                  ? '💳 Card Payment — Coming Soon'
+                  ? ' Card Payment — Coming Soon'
                   : `Place Order — Rs. ${grandTotal.toLocaleString()}`}
               </button>
               <p style={{ fontSize: 12, color: '#999', textAlign: 'center', lineHeight: 1.6 }}>
