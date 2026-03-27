@@ -55,7 +55,7 @@ export default function OrderSuccess() {
           width: 58px; 
           height: 58px; 
           border-radius: 50%; 
-          background: linear-gradient(135deg, #10b981, #059669); 
+          background: linear-gradient(135deg, #036011, #08791f); 
           color: #fff; 
           font-size: 30px; 
           display: flex; 
@@ -113,7 +113,7 @@ export default function OrderSuccess() {
           align-items: center;
           justify-content: center;
           width: 100%;
-          background: linear-gradient(135deg, #10b981, #047857);
+          background: linear-gradient(135deg, #0a7408, #03450f);
           color: white;
           text-decoration: none;
           padding: 16px 24px;
@@ -168,7 +168,7 @@ export default function OrderSuccess() {
           {/* Flex Header aligning Icon and Title on the same line */}
           <div className="os-header">
             <div className="os-check"><strong>✔</strong></div>
-            <h2 className="os-title">Order Placed! 🎉</h2>
+            <h2 className="os-title">Order Placed!</h2>
           </div>
 
           <p style={{ fontSize: '14px', color: '#4b5563', lineHeight: '1.6', marginBottom: '14px', textAlign: 'center' }}>
@@ -177,7 +177,7 @@ export default function OrderSuccess() {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '24px' }}>
             {orderId && (
-              <span style={{ background: '#f0fdf4', color: '#166534', padding: '6px 14px', borderRadius: '50px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #bbf7d0' }}>
+              <span style={{ background: '#f0fdf4', color: '#166534', padding: '8px 8px', borderRadius: '50px', fontSize: '10px', fontWeight: 'bold', border: '1px solid #bbf7d0' }}>
                 Order #{orderId}
               </span>
             )}
@@ -185,9 +185,9 @@ export default function OrderSuccess() {
             <span style={{ 
               background: isPaid ? '#eff6ff' : '#fef3c7', 
               color: isPaid ? '#1e40af' : '#92400e', 
-              padding: '6px 14px', 
+              padding: '8px 8px', 
               borderRadius: '50px', 
-              fontSize: '12px', 
+              fontSize: '10px', 
               fontWeight: 'bold',
               border: `1px solid ${isPaid ? '#bfdbfe' : '#fde68a'}`
             }}>
