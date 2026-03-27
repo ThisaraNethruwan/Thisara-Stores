@@ -282,7 +282,7 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
       if (state === 'denied') {
         // Already denied — show helpful message immediately, don't fire the blocked API
         setGeoStatus('denied')
-        setGeoMsg('Location access is blocked in your browser. Please update your browser/site settings to allow location, then tap the button.')
+        setGeoMsg('Location access is blocked in your browser. Please update your browser/site settings to allow location, then refresh the page.')
         setLoading(false)
         return
       }
@@ -333,7 +333,7 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
       let instructions = 'To allow location: open your browser settings → Site Settings → Location → Allow this site.'
 
       if (/iphone|ipad|ipod/.test(ua)) {
-        instructions = 'On iOS: go to Settings → Privacy → Location Services → Safari/Chrome → Allow While Using App, then tap again.'
+        instructions = 'On iOS: go to Settings → Privacy → Location Services → Safari/Chrome → Allow While Using App, then refresh the page.'
       } else if (/android/.test(ua)) {
         instructions = 'On Android: tap the lock icon 🔒 in your address bar → Permissions → Location → Allow.'
       } else if (/chrome/.test(ua)) {
