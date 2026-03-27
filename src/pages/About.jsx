@@ -231,7 +231,7 @@ export default function About() {
 
             {/* Left: text */}
             <div>
-              <div className="ab-tag">🌿 Our Story</div>
+              <div className="ab-tag">👋 Our Story</div>
               <h1 className="ab-h1">
                 Fresh Groceries,<br />
                 Honest People,<br />
