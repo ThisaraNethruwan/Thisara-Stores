@@ -6,8 +6,8 @@ export const SHOP_AREA            = 'Ragama'
 export const SHOP_HOURS           = 'Open daily: 10:00 AM – 9:00 PM'
 export const HERO_IMAGE_URL       = '/delivery-guy-2.svg'
 
-export const SHOP_LAT             = 7.0278
-export const SHOP_LNG             = 79.9212
+export const SHOP_LAT             = 7.015468376212816
+export const SHOP_LNG             = 79.91953996256439
 
 export const DELIVERY_RATE_PER_KM    = 70
 export const FREE_DELIVERY_THRESHOLD = 10000
@@ -26,3 +26,11 @@ export const DELIVERY_AREAS = [
   'Ragama','Kandana','Ja-Ela','Wattala','Kelaniya',
   'Peliyagoda','Ekala','Seeduwa','Minuwangoda','Katunayake','Other',
 ]
+
+// Collision-resistant order ID: TS + base-36 timestamp + 4 random chars
+// e.g.  TSM0ZZZZ1A2B  — effectively unique for decades of use
+export function generateOrderId() {
+  const ts  = Date.now().toString(36).toUpperCase()
+  const rnd = Math.random().toString(36).substring(2, 6).toUpperCase()
+  return `TS${ts}${rnd}`
+}
