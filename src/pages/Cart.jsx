@@ -700,8 +700,7 @@ export default function Cart() {
                   </div>
                 ) : !location.lat ? (
                   <div className="notice notice-pending">
-                    <span>📍</span>
-                    <span>Please pin your location to see the delivery fee (Rs. {DELIVERY_RATE_PER_KM}/km).</span>
+                
                   </div>
                 ) : deliveryFee !== null ? (
                   <div className="notice notice-has">
