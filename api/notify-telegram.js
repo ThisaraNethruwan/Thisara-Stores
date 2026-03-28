@@ -31,9 +31,6 @@ export default async function handler(req, res) {
   const esc = (s) =>
     String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-  // ── Build items list ─────────────────────────────────────────────────────────
-  // Weight-based:  ⚖️ Basmati Rice — 2.5 kg × 3 packs  →  Rs. 1,875
-  // Regular:       🛒 Coconut Milk — x2               →  Rs. 480
   let itemLines = ''
   let itemCount = 0
 
@@ -49,12 +46,12 @@ export default async function handler(req, res) {
         // Show weight label (e.g. "2.5 kg") AND how many packs/units were ordered
         const weightLabel = esc(i.weightLabel || `${i.weightValue} kg`)
         const packs       = i.qty > 1 ? ` × ${i.qty}` : ''
-        qtyPart = `⚖️ ${weightLabel}${packs}`
+        qtyPart = `${weightLabel}${packs}`
       } else {
         qtyPart = `x${i.qty}`
       }
 
-itemLines += `  ${num}. <b>${name}</b>  |  ${qtyPart}  →  Rs. ${sub}\n`
+itemLines += `  ${num}. <b>${name}</b>  ${qtyPart}  →  Rs. ${sub}\n`
     })
   }
 
