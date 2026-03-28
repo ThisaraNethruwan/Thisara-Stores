@@ -140,11 +140,12 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
       maxZoom: 20,
     }).addTo(map)
 
-    // Shop marker
-    const shopIcon = L.divIcon({
-      html: `<div style="background:#1e6641;color:#fff;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.4);">🏪</div>`,
-      className: '', iconSize: [40, 40], iconAnchor: [20, 20],
-    })
+const shopIcon = L.divIcon({
+  html: `<div style="width:44px;height:44px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.4);overflow:hidden;background:#fff;">
+           <img src="/logo-round.png" alt="Thisara Stores" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
+         </div>`,
+  className: '', iconSize: [44, 44], iconAnchor: [22, 22],
+})
     L.marker([SHOP_LAT, SHOP_LNG], { icon: shopIcon })
       .addTo(map)
       .bindPopup('<b style="font-family:sans-serif">🏪 Thisara Stores</b>')
