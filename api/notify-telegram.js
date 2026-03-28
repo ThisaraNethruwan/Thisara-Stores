@@ -83,23 +83,23 @@ export default async function handler(req, res) {
 
   // ── Compose message ──────────────────────────────────────────────────────────
   const message =
-    `🛒 <b>NEW ORDER — Thisara Stores</b>\n` +
+    `<b>NEW ORDER — Thisara Stores</b>\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
-    `🔖 Order ID:  <b>${esc(orderId)}</b>\n` +
-    `👤 Customer:  <b>${esc(customerName)}</b>\n` +
-    `📞 Phone:     <b>${esc(customerPhone)}</b>\n` +
+    `Order ID:  <b>${esc(orderId)}</b>\n` +
+    `Customer:  <b>${esc(customerName)}</b>\n` +
+    `Phone:     <b>${esc(customerPhone)}</b>\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
-    `📍 <b>Delivery Address:</b>\n${locationBlock}\n` +
+    `📍<b>Delivery Address:</b>\n${locationBlock}\n` +
     `${noteLine}` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
-    `🧾 <b>Order Items (${itemCount}):</b>\n` +
+    `<b>Order Items (${itemCount}):</b>\n` +
     `${itemLines}` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
-    `💰 Subtotal:  Rs. ${Number(subtotal).toLocaleString()}\n` +
-    `🚚 ${feeLine}\n` +
+    `Subtotal:  Rs. ${Number(subtotal).toLocaleString()}\n` +
+    `${feeLine}\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
-    `🏷️ <b>TOTAL:  Rs. ${Number(totalPrice).toLocaleString()}</b>\n` +
-    `💳 Payment:  ${paymentLine}\n` +
+    `<b>TOTAL:  Rs. ${Number(totalPrice).toLocaleString()}</b>\n` +
+    `Payment:  ${paymentLine}\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
     `<i>Please confirm &amp; arrange delivery 🚚</i>`
 
