@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 itemLines += `  ${num}. <b>${name}</b>  |  ${qtyPart}  →  Rs. ${sub}\n`
     })
   }
-<br></br>
+
   // ── Build location block ──────────────────────────────────────────────────────
   let locationBlock = esc(deliveryAddress || 'Not provided')
   if (deliveryLat && deliveryLng) {
