@@ -168,7 +168,7 @@ export default function OrderSuccess() {
           
           {/* Flex Header aligning Icon and Title on the same line */}
           <div className="os-header">
-            <div className="os-check"><strong>✔</strong></div>
+           <div className="os-check"><strong>✅</strong></div>
             <h2 className="os-title">Order Placed!</h2>
           </div>
 
