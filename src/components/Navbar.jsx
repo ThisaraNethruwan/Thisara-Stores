@@ -4,7 +4,7 @@ import { useCart } from './CartContext'
 import { SHOP_NAME } from '../utils/constants'
 
 export default function Navbar() {
-  const { count }               = useCart()
+  const { count, totalQty } = useCart()
   const [open, setOpen]         = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const loc                     = useLocation()
