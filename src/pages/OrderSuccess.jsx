@@ -158,6 +158,7 @@ export default function OrderSuccess() {
             width: 45px;
             height: 45px;
             font-size: 20px;
+            color: #fff; 
           }
         }
       `}</style>
