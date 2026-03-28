@@ -59,10 +59,11 @@ export function CartProvider({ children }) {
   const clearCart = useCallback(() => setCart([]), [])
 
   const total = useMemo(() => cart.reduce((s, i) => s + (i.subtotal || 0), 0), [cart])
-  const count = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart])
+  const count     = useMemo(() => cart.length, [cart])  // distinct products
+  const totalQty  = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart])  // total quantity
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQty, clearCart, total, count }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQty, clearCart, total, count, totalQty }}>
       {children}
     </CartContext.Provider>
   )
