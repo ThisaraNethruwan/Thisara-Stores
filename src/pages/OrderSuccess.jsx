@@ -50,21 +50,17 @@ export default function OrderSuccess() {
           gap: 14px;
           margin-bottom: 8px;
         }
+          .os-check { 
+  width: 72px; 
+  height: 72px; 
+  border-radius: 50%; 
+  overflow: hidden;
+  flex-shrink: 0;
+  animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  border: 2px solid #066022;
+}
 
-        .os-check { 
-          width: 58px; 
-          height: 58px; 
-          border-radius: 50%; 
-          background: linear-gradient(135deg, #036011, #08791f); 
-          color: #fff; 
-          font-size: 30px; 
-          display: flex; 
-          align-items: center; 
-          justify-content: center; 
-          flex-shrink: 0;
-          box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
-          animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-        }
+       
 
         .os-title {
           font-family: 'Fraunces', Georgia, serif; 
@@ -155,8 +151,8 @@ export default function OrderSuccess() {
           }
             
           .os-check {
-            width: 45px;
-            height: 45px;
+            width: 55px;
+            height: 55px;
             font-size: 20px;
             color: #fff; 
           }
@@ -168,7 +164,9 @@ export default function OrderSuccess() {
           
           {/* Flex Header aligning Icon and Title on the same line */}
           <div className="os-header">
-           <div className="os-check"><strong>✅</strong></div>
+            <div className="os-check">
+  <img src="/logo-round.png" alt="Thisara Stores" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+</div>
             <h2 className="os-title">Order Placed!</h2>
           </div>
 
