@@ -3,8 +3,16 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useCart } from '../components/CartContext'
 import { addOrder } from '../lib/firebase'
 import LocationPicker from '../components/LocationPicker'
-import { SHOP_NAME, DELIVERY_RATE_PER_KM, FREE_DELIVERY_THRESHOLD, generateOrderId } from '../utils/constants'
+import { SHOP_NAME, DELIVERY_RATE_PER_KM, FREE_DELIVERY_THRESHOLD } from '../utils/constants'
 import toast from 'react-hot-toast'
+
+// ── Short Order ID: TS + 6 random alphanumeric chars  e.g. TS4X9K2M ──────────
+function generateOrderId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no ambiguous 0/O/1/I
+  let suffix = ''
+  for (let i = 0; i < 6; i++) suffix += chars[Math.floor(Math.random() * chars.length)]
+  return `TS${suffix}`
+}
 
 const CAT_COLORS = {
   'Rice & Grains':        'linear-gradient(135deg,#f5e6b0,#e8d070)',
@@ -60,7 +68,6 @@ function CardComingSoonModal({ onClose }) {
       <div className="csm-card" onClick={e => e.stopPropagation()}>
         <button className="csm-close" onClick={onClose} aria-label="Close">✕</button>
 
-        {/* Animated top banner */}
         <div className="csm-banner">
           <div className="csm-banner-rings">
             <div className="csm-ring csm-ring-1" />
@@ -78,7 +85,6 @@ function CardComingSoonModal({ onClose }) {
             <strong> seamless and secure</strong> online card payment option.
           </p>
 
-          {/* Feature previews */}
           <div className="csm-features">
             <div className="csm-feat">
               <div className="csm-feat-icon csm-feat-blue">🔒</div>
@@ -97,8 +103,6 @@ function CardComingSoonModal({ onClose }) {
           </div>
 
           <div className="csm-divider" />
-
-
 
           <button className="csm-btn-ok" onClick={onClose}>
             Got it — use Cash on Delivery
@@ -163,13 +167,13 @@ export default function Cart() {
   const { cart, removeFromCart, updateQty, clearCart, total, count } = useCart()
   const navigate = useNavigate()
 
-  const [form, setForm]                     = useState({ name: '', phone: '', note: '' })
-  const [location, setLocation]             = useState({ address: '', lat: null, lng: null, distKm: null, fee: null })
-  const [errors, setErrors]                 = useState({})
-  const [submitting, setSubmitting]         = useState(false)
+  const [form, setForm]                           = useState({ name: '', phone: '', note: '' })
+  const [location, setLocation]                   = useState({ address: '', lat: null, lng: null, distKm: null, fee: null })
+  const [errors, setErrors]                       = useState({})
+  const [submitting, setSubmitting]               = useState(false)
   const [showDeliveryModal, setShowDeliveryModal] = useState(false)
-  const [paymentMethod, setPaymentMethod]   = useState('cod')   // 'cod' | 'card'
-  const [showCardModal, setShowCardModal]   = useState(false)
+  const [paymentMethod, setPaymentMethod]         = useState('cod')
+  const [showCardModal, setShowCardModal]         = useState(false)
 
   const locationPickerKey = useMemo(() => `lp-${Date.now()}`, [])
 
@@ -212,10 +216,12 @@ export default function Cart() {
     deliveryLng:     location.lng,
     note:            form.note.trim(),
     items: cart.map(i => ({
-      id: i.id, name: i.name, category: i.category,
-      image_url: i.image_url || '',
-      qty: i.qty,
-      price: i.price || i.price_per_kg,
+      id:            i.id,
+      name:          i.name,
+      category:      i.category,
+      image_url:     i.image_url || '',
+      qty:           i.qty,
+      price:         i.price || i.price_per_kg,
       isWeightBased: i.is_weight_based,
       weightValue:   i.weight_value || null,
       weightLabel:   i.weight_label || null,
@@ -231,9 +237,9 @@ export default function Cart() {
 
   const handleCODOrder = async () => {
     setSubmitting(true)
-    const fee = deliveryFee ?? 0
-    const tot = total + fee
-    const id  = generateOrderId()
+    const fee     = deliveryFee ?? 0
+    const tot     = total + fee
+    const id      = generateOrderId()
     const payload = buildPayload(fee, tot, id)
     try {
       await addOrder(payload)
@@ -396,19 +402,11 @@ export default function Cart() {
         .csm-feat-title { font-size:13px; font-weight:800; color:#1a1a1a; }
         .csm-feat-sub   { font-size:11.5px; color:#888; margin-top:1px; }
         .csm-divider { height:1px; background:#f0f0f0; margin:0 0 16px; }
-        .csm-progress-wrap { margin-bottom:20px; }
-        .csm-progress-label { display:flex; justify-content:space-between; font-size:12px; color:#666; font-weight:700; margin-bottom:7px; }
-        .csm-progress-pct { color:#06159d; font-weight:900; }
-        .csm-progress-track { height:8px; background:#f0f0f0; border-radius:50px; overflow:hidden; }
-        .csm-progress-fill { height:100%; width:72%; background:#06159d; border-radius:50px; animation:progressGrow .8s cubic-bezier(0.34,1.36,0.64,1) .1s both; }
-        @keyframes progressGrow { from{width:0} to{width:72%} }
         .csm-btn-ok { width:100%; padding:15px; border-radius:13px; background:linear-gradient(135deg,#1a3d28,#1e6641); color:#fff; border:none; font-size:15px; font-weight:800; cursor:pointer; font-family:'Nunito',sans-serif; transition:all .2s; margin-bottom:8px; }
         .csm-btn-ok:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(30,102,65,.3); }
         .csm-note { font-size:11.5px; color:#aaa; text-align:center; margin:0; line-height:1.5; padding-bottom:4px; }
         @media(max-width:480px) { .csm-card{border-radius:20px} .csm-banner{padding:8px 12px 6px} .csm-banner-icon{font-size:58px} .csm-title{font-size:24px} .csm-body{padding:10px 18px 13px} }
-      `}
-  
-      </style>
+      `}</style>
 
       {showDeliveryModal && (
         <DeliveryInfoModal
@@ -612,8 +610,6 @@ export default function Cart() {
                 </div>
               </div>
 
-            
-            
               <div className="info-box info-green">
                 <span>Your order will be confirmed and delivered to your doorstep!</span>
               </div>
@@ -627,7 +623,7 @@ export default function Cart() {
                 {submitting
                   ? '⏳ Processing your order…'
                   : paymentMethod === 'card'
-                  ? ' Card Payment — Coming Soon'
+                  ? '💳 Card Payment — Coming Soon'
                   : `Place Order — Rs. ${grandTotal.toLocaleString()}`}
               </button>
               <p style={{ fontSize: 12, color: '#999', textAlign: 'center', lineHeight: 1.6 }}>
