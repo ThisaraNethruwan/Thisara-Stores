@@ -6,10 +6,12 @@ import LocationPicker from '../components/LocationPicker'
 import { SHOP_NAME, DELIVERY_RATE_PER_KM, FREE_DELIVERY_THRESHOLD } from '../utils/constants'
 import toast from 'react-hot-toast'
 
-// ── Short Order ID: TS-XXXXXX  e.g. TS-105453 ───────────────────────────────
+// ── Short Order ID: TS + 6 random alphanumeric chars  e.g. TS4X9K2M ──────────
 function generateOrderId() {
-  const digits = Math.floor(100000 + Math.random() * 900000) // always 6 digits
-  return `TS-${digits}`
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no ambiguous 0/O/1/I
+  let suffix = ''
+  for (let i = 0; i < 6; i++) suffix += chars[Math.floor(Math.random() * chars.length)]
+  return `TS${suffix}`
 }
 
 const CAT_COLORS = {
