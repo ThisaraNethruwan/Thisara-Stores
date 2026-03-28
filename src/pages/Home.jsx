@@ -487,7 +487,7 @@ export default function Home() {
                 <span style={{ color:'#f4a322' }}>Now at Your Door</span>
               </h1>
               <p className="h-hero-desc fade-up-3">
-                Rice, spices, vegetables and all daily essentials delivered fresh to your door across {SHOP_AREA} and nearby areas.
+                Rice, spices, groceries and all daily essentials delivered fresh to your door across {SHOP_AREA} and nearby areas.
               </p>
               <div className="h-hero-btns fade-up-4">
                 <Link to="/shop" className="h-btn-white">🛒 Shop Now →</Link>
