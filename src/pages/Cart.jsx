@@ -321,6 +321,14 @@ export default function Cart() {
         .order-btn { width:100%; padding:16px; border-radius:14px; font-weight:800; font-size:16px; border:none; cursor:pointer; margin-bottom:10px; font-family:'Nunito',sans-serif; transition:all .2s; }
         .order-btn:not(:disabled):hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(30,102,65,.3); }
         .order-btn:disabled { background:#d1d5db !important; color:#9ca3af !important; cursor:not-allowed !important; transform:none !important; box-shadow:none !important; }
+        /* ── iOS touch fix ── */
+.order-btn,
+.pay-opt,
+.qty-btn,
+.ci-rm {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
         @media(max-width:900px) { .cp-grid { grid-template-columns:1fr !important; } .fc { position:static; } }
         @media(max-width:540px) { .ci { flex-wrap:wrap; gap:8px; } .ci-ctrl { width:100%; justify-content:space-between; } }
 
@@ -439,7 +447,7 @@ export default function Cart() {
                   <h2>Order Items ({count})</h2>
                   <button
                     onClick={() => { if (window.confirm('Clear entire cart?')) clearCart() }}
-                    style={{ background: 'none', border: '1.5px solid #e8ede9', color: '#888', padding: '5px 14px', borderRadius: 50, fontSize: 12, cursor: 'pointer' }}
+                    style={{ background: 'none', border: '1.5px solid #e8ede9', color: '#888', padding: '5px 14px', borderRadius: 50, fontSize: 12, cursor: 'pointer', touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   >Clear All</button>
                 </div>
 
