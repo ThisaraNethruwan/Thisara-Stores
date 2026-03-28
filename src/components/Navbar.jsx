@@ -44,7 +44,7 @@ export default function Navbar() {
           height:64px; padding:0 20px; gap:12px;
         }
         .nav-logo { display:flex; align-items:center; gap:10px; flex-shrink:0; text-decoration:none; }
-        .nav-logo img { width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid #d8f3dc; flex-shrink:0; }
+        .nav-logo img { width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid #045f12; flex-shrink:0; }
         .nav-logo-name { font-family:'Fraunces',serif; font-size:19px; font-weight:900; color:#1e6641; line-height:1.1; }
         .nav-logo-sub { font-size:10px; color:#6b7c74; letter-spacing:.4px; }
         .nav-links { display:flex; gap:2px; }
