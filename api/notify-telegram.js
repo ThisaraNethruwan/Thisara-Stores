@@ -54,8 +54,7 @@ export default async function handler(req, res) {
         qtyPart = `x${i.qty}`
       }
 
-      itemLines += `  ${num}. <b>${name}</b>\n`
-      itemLines += `      ${qtyPart}  →  Rs. ${sub}\n`
+itemLines += `  ${num}. <b>${name}</b>  |  ${qtyPart}  →  Rs. ${sub}\n`
     })
   }
 
