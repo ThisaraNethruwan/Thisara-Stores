@@ -141,7 +141,7 @@ export default function LocationPicker({ onLocationSelect, initialAddress = '', 
     }).addTo(map)
 
 const shopIcon = L.divIcon({
-  html: `<div style="width:44px;height:44px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.4);overflow:hidden;background:#fff;">
+  html: `<div style="width:44px;height:44px;border-radius:50%;border:2px solid #077203;box-shadow:0 2px 12px rgba(0,0,0,.4);overflow:hidden;background:#fff;">
            <img src="/logo-round.png" alt="Thisara Stores" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />
          </div>`,
   className: '', iconSize: [44, 44], iconAnchor: [22, 22],
