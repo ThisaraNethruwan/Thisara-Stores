@@ -16,29 +16,71 @@ const CAT_COLORS = {
 
 export default function ProductCard({ product }) {
   const { addToCart } = useCart()
-  const [showModal, setShowModal] = useState(false)
-  const [selected, setSelected] = useState(null)
-  const [imgErr, setImgErr] = useState(false)
-  const [added, setAdded] = useState(false)
+  const [showModal, setShowModal]           = useState(false)
+  const [selected, setSelected]             = useState(null)       // weight option
+  const [selectedVariant, setSelectedVariant] = useState(null)     // variant option
+  const [imgErr, setImgErr]                 = useState(false)
+  const [added, setAdded]                   = useState(false)
 
-  const bg = CAT_COLORS[product.category] || 'linear-gradient(135deg,#d8f3dc,#b7e4c7)'
-  const isWeight = product.is_weight_based
+  const bg       = CAT_COLORS[product.category] || 'linear-gradient(135deg,#d8f3dc,#b7e4c7)'
+  const isWeight  = product.is_weight_based
+  const hasVariants = product.has_variants && product.variants?.length > 0
   const available = WEIGHT_OPTIONS.filter(w => !product.max_weight || w.value <= product.max_weight)
+
+  // Needs a modal if weight-based OR has variants
+  const needsModal = isWeight || hasVariants
 
   const handleAdd = () => {
     if (product.stock === 0) return
-    if (isWeight) { setShowModal(true) }
-    else { doAdd() }
+    if (needsModal) {
+      setShowModal(true)
+    } else {
+      doAdd()
+    }
   }
 
-  const doAdd = (wOpt = null) => {
-    addToCart(product, wOpt)
+  // Resolve effective price for a chosen variant
+  const getVariantPrice = (variant) => {
+    if (!variant) return product.price
+    if (variant.price_override !== undefined && variant.price_override !== null && variant.price_override !== '') {
+      return Number(variant.price_override)
+    }
+    return product.price
+  }
+
+  const doAdd = (wOpt = null, vOpt = null) => {
+    // Build extra fields to merge into cart item
+    const variantFields = vOpt ? {
+      selectedVariant:       vOpt.label,
+      selectedVariantPrice:  getVariantPrice(vOpt),
+      // Override price with variant price if different
+      price: getVariantPrice(vOpt),
+    } : {}
+
+    addToCart({ ...product, ...variantFields }, wOpt)
     setAdded(true)
     setShowModal(false)
     setSelected(null)
-    toast.success(`${product.name} added! 🛒`)
+    setSelectedVariant(null)
+    const suffix = vOpt ? ` (${vOpt.label})` : ''
+    toast.success(`${product.name}${suffix} added! 🛒`)
     setTimeout(() => setAdded(false), 1400)
   }
+
+  // Confirm button in modal — both weight and variant must be chosen if applicable
+  const canConfirm = (!isWeight || selected) && (!hasVariants || selectedVariant)
+
+  const handleConfirm = () => {
+    if (!canConfirm) return
+    doAdd(isWeight ? selected : null, hasVariants ? selectedVariant : null)
+  }
+
+  // Display price: if variant selected show that price, else base
+  const displayPrice = (() => {
+    if (isWeight) return null // shown as /kg
+    if (selectedVariant) return getVariantPrice(selectedVariant)
+    return product.price
+  })()
 
   return (
     <>
@@ -72,6 +114,7 @@ export default function ProductCard({ product }) {
               </span>
             )}
             {isWeight && <span className="product-badge" style={{ background:'#7c3aed' }}>⚖️ Weight</span>}
+            {hasVariants && <span className="product-badge" style={{ background:'#db2777' }}>🎨 Variants</span>}
           </div>
           {product.stock === 0 && (
             <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.55)', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:800, fontSize:14, letterSpacing:1 }}>
@@ -92,6 +135,21 @@ export default function ProductCard({ product }) {
           </div>
           <div style={{ fontFamily:'Fraunces,serif', fontSize:15, fontWeight:700, color:'#111', marginBottom:4, lineHeight:1.3 }}>{product.name}</div>
           {product.description && <div style={{ fontSize:11, color:'#888', flex:1, lineHeight:1.5, marginBottom:8 }}>{product.description.slice(0,60)}{product.description.length>60?'…':''}</div>}
+
+          {/* Variant pills preview on card */}
+          {hasVariants && (
+            <div style={{ display:'flex', gap:4, flexWrap:'wrap', marginBottom:8 }}>
+              {product.variants.slice(0,4).map((v,i) => (
+                <span key={i} style={{ background:'#fdf4ff', border:'1.5px solid #e9d5ff', color:'#7c3aed', fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:50 }}>
+                  {v.label}
+                </span>
+              ))}
+              {product.variants.length > 4 && (
+                <span style={{ fontSize:10, color:'#aaa', padding:'2px 4px' }}>+{product.variants.length - 4}</span>
+              )}
+            </div>
+          )}
+
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginTop:'auto', paddingTop:8 }}>
             <div>
               {isWeight ? (
@@ -99,7 +157,8 @@ export default function ProductCard({ product }) {
                   <div style={{ fontSize:10, color:'#999' }}>Choose amount</div></>
               ) : (
                 <><div style={{ fontFamily:'Fraunces,serif', fontSize:17, fontWeight:900, color:'#1e6641' }}>Rs. {Number(product.price).toLocaleString()}</div>
-                  {product.unit && <div style={{ fontSize:10, color:'#999' }}>per {product.unit}</div>}</>
+                  {product.unit && <div style={{ fontSize:10, color:'#999' }}>per {product.unit}</div>}
+                  {hasVariants && <div style={{ fontSize:10, color:'#db2777' }}>Select variant →</div>}</>
               )}
             </div>
             <button onClick={handleAdd} disabled={product.stock===0}
@@ -118,41 +177,137 @@ export default function ProductCard({ product }) {
         </div>
       </div>
 
-      {/* Weight Modal */}
+      {/* ── Selection Modal (weight and/or variants) ── */}
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-box pop-in" onClick={e=>e.stopPropagation()} style={{ maxWidth:380 }}>
+          <div className="modal-box pop-in" onClick={e=>e.stopPropagation()} style={{ maxWidth:420 }}>
             <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
-            <div style={{ textAlign:'center', marginBottom:16 }}>
-              <span style={{ fontSize:48 }}>{product.category_emoji || '⚖️'}</span>
+
+            <div style={{ textAlign:'center', marginBottom:20 }}>
+              <span style={{ fontSize:48 }}>{product.category_emoji || '🛒'}</span>
               <h3 style={{ fontFamily:'Fraunces,serif', fontSize:20, fontWeight:900, marginTop:8 }}>{product.name}</h3>
-              <p style={{ fontSize:13, color:'#666', marginTop:4 }}>Rs. {Number(product.price_per_kg).toLocaleString()}/kg · Choose your amount:</p>
+              {product.description && (
+                <p style={{ fontSize:12, color:'#888', marginTop:4, lineHeight:1.5 }}>{product.description}</p>
+              )}
             </div>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginBottom:18 }}>
-              {available.map(w => {
-                const cost = product.price_per_kg * w.value
-                const sel = selected?.value === w.value
-                return (
-                  <button key={w.value} onClick={() => setSelected(w)}
-                    style={{
-                      border: sel ? '2px solid #1e6641' : '2px solid #e8ede9',
-                      background: sel ? '#f0faf3' : '#fff',
-                      borderRadius:12, padding:'12px 8px', cursor:'pointer',
-                      textAlign:'center',
-                    }}>
-                    <div style={{ fontWeight:800, fontSize:15, color:'#111' }}>{w.label}</div>
-                    <div style={{ fontSize:11, color:'#52b788', marginTop:3 }}>Rs. {cost.toLocaleString()}</div>
-                  </button>
-                )
-              })}
-            </div>
-            <button onClick={() => selected && doAdd(selected)} disabled={!selected}
-              style={{
-                width:'100%', background: selected ? '#1e6641' : '#ccc', color:'#fff',
-                padding:14, borderRadius:12, fontWeight:800, fontSize:14, border:'none', cursor: selected?'pointer':'not-allowed',
-              }}>
-              {selected ? `Add ${selected.label} — Rs. ${(product.price_per_kg*selected.value).toLocaleString()}` : 'Select quantity above'}
-            </button>
+
+            {/* ── VARIANT SELECTION ── */}
+            {hasVariants && (
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontSize:13, fontWeight:800, color:'#5b21b6', marginBottom:10, display:'flex', alignItems:'center', gap:6 }}>
+                  🎨 Choose your option <span style={{ color:'#e63946', fontWeight:900 }}>*</span>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:8 }}>
+                  {product.variants.map((v, i) => {
+                    const vPrice  = getVariantPrice(v)
+                    const isSel   = selectedVariant?.label === v.label
+                    const hasDiff = v.price_override !== undefined && v.price_override !== null && v.price_override !== '' && Number(v.price_override) !== Number(product.price)
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedVariant(v)}
+                        style={{
+                          border: isSel ? '2.5px solid #7c3aed' : '2px solid #e9d5ff',
+                          background: isSel ? '#faf5ff' : '#fff',
+                          borderRadius:12, padding:'12px 10px', cursor:'pointer',
+                          textAlign:'center', transition:'all .18s', position:'relative',
+                          boxShadow: isSel ? '0 0 0 3px rgba(124,58,237,.12)' : 'none',
+                        }}
+                      >
+                        {isSel && (
+                          <div style={{ position:'absolute', top:6, right:8, width:18, height:18, borderRadius:'50%', background:'#7c3aed', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:'#fff', fontWeight:900 }}>✓</div>
+                        )}
+                        <div style={{ fontWeight:800, fontSize:14, color: isSel ? '#5b21b6' : '#111' }}>{v.label}</div>
+                        <div style={{ fontSize:12, marginTop:4, color: isSel ? '#7c3aed' : '#52b788', fontWeight:700 }}>
+                          Rs. {Number(vPrice).toLocaleString()}
+                        </div>
+                        {hasDiff && (
+                          <div style={{ fontSize:10, color:'#db2777', marginTop:2, fontWeight:700 }}>
+                            {Number(v.price_override) > Number(product.price) ? '▲' : '▼'} Special price
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+                {!selectedVariant && (
+                  <div style={{ fontSize:11, color:'#e63946', marginTop:8, fontWeight:600 }}>⚠️ Please choose an option above</div>
+                )}
+              </div>
+            )}
+
+            {/* ── WEIGHT SELECTION ── */}
+            {isWeight && (
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontSize:13, fontWeight:800, color:'#1e6641', marginBottom:10, display:'flex', alignItems:'center', gap:6 }}>
+                  ⚖️ Choose your amount <span style={{ color:'#e63946', fontWeight:900 }}>*</span>
+                </div>
+                <p style={{ fontSize:12, color:'#888', marginBottom:12 }}>
+                  Rs. {Number(product.price_per_kg).toLocaleString()}/kg
+                  {selectedVariant?.price_override !== undefined && selectedVariant?.price_override !== '' &&
+                    ` (${selectedVariant.label}: Rs. ${Number(selectedVariant.price_override).toLocaleString()}/kg)`
+                  }
+                </p>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
+                  {available.map(w => {
+                    const basePerKg = (selectedVariant && selectedVariant.price_override !== undefined && selectedVariant.price_override !== '')
+                      ? Number(selectedVariant.price_override)
+                      : product.price_per_kg
+                    const cost = basePerKg * w.value
+                    const sel  = selected?.value === w.value
+                    return (
+                      <button key={w.value} onClick={() => setSelected(w)}
+                        style={{
+                          border: sel ? '2px solid #1e6641' : '2px solid #e8ede9',
+                          background: sel ? '#f0faf3' : '#fff',
+                          borderRadius:12, padding:'12px 8px', cursor:'pointer', textAlign:'center',
+                          boxShadow: sel ? '0 0 0 3px rgba(30,102,65,.1)' : 'none',
+                          transition:'all .18s',
+                        }}>
+                        <div style={{ fontWeight:800, fontSize:15, color:'#111' }}>{w.label}</div>
+                        <div style={{ fontSize:11, color:'#52b788', marginTop:3, fontWeight:700 }}>Rs. {cost.toLocaleString()}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ── SUMMARY / CONFIRM ── */}
+            {(() => {
+              let summaryPrice = null
+              let summaryLabel = ''
+
+              if (isWeight && selected) {
+                const perKg = product.price_per_kg
+                summaryPrice = perKg * selected.value
+                summaryLabel = `${selected.label}`
+                if (selectedVariant) summaryLabel = `${selectedVariant.label} · ${selected.label}`
+              } else if (!isWeight && selectedVariant) {
+                summaryPrice = getVariantPrice(selectedVariant)
+                summaryLabel = selectedVariant.label
+              }
+
+              return (
+                <button
+                  onClick={handleConfirm}
+                  disabled={!canConfirm}
+                  style={{
+                    width:'100%', padding:14, borderRadius:12, fontWeight:800, fontSize:14, border:'none',
+                    cursor: canConfirm ? 'pointer' : 'not-allowed',
+                    background: canConfirm
+                      ? (hasVariants ? 'linear-gradient(135deg,#5b21b6,#7c3aed)' : '#1e6641')
+                      : '#ccc',
+                    color:'#fff', transition:'all .2s',
+                  }}
+                >
+                  {canConfirm
+                    ? `Add to Cart${summaryLabel ? ` — ${summaryLabel}` : ''}${summaryPrice ? ` — Rs. ${Number(summaryPrice).toLocaleString()}` : ''}`
+                    : `Select ${hasVariants && !selectedVariant ? 'an option' : ''}${hasVariants && !selectedVariant && isWeight && !selected ? ' & ' : ''}${isWeight && !selected ? 'amount' : ''} above`
+                  }
+                </button>
+              )
+            })()}
           </div>
         </div>
       )}
