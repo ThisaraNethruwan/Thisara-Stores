@@ -225,6 +225,7 @@ export default function Cart() {
       isWeightBased: i.is_weight_based,
       weightValue:   i.weight_value || null,
       weightLabel:   i.weight_label || null,
+      selectedVariant: i.selectedVariant || null,
       subtotal:      i.subtotal,
     })),
     subtotal:      tot - fee,
@@ -456,11 +457,18 @@ export default function Cart() {
                     <div key={item.cartKey} className="ci">
                       <ItemImage item={item} />
                       <div className="ci-info">
-                        <div className="ci-name">{item.name}</div>
+                        <div className="ci-name">
+                          {item.name}
+                          {item.selectedVariant && (
+                            <span style={{ background:'#ede9fe', color:'#5b21b6', fontSize:10, fontWeight:700, padding:'2px 7px', borderRadius:50, marginLeft:6, verticalAlign:'middle' }}>
+                              {item.selectedVariant}
+                            </span>
+                          )}
+                        </div>
                         <div className="ci-price">
                           {item.is_weight_based
                             ? `⚖️ ${item.weight_label} · Rs. ${Number(item.price_per_kg).toLocaleString()}/kg`
-                            : `Rs. ${Number(item.price).toLocaleString()}${item.unit ? ` per ${item.unit}` : ''}`}
+                            : `Rs. ${Number(item.selectedVariantPrice || item.price).toLocaleString()}${item.unit ? ` per ${item.unit}` : ''}`}
                         </div>
                       </div>
                       <div className="ci-ctrl">
