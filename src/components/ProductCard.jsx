@@ -270,7 +270,7 @@ export default function ProductCard({ product }) {
                         </div>
                         {hasDiff && (
                           <div style={{ fontSize: 10, color: '#db2777', marginTop: 2, fontWeight: 700 }}>
-                            {Number(v.price_override) > Number(product.price) ? '▲' : '▼'} Special price
+                            {Number(v.price_override) > Number(product.price) ? '' : ''} 
                           </div>
                         )}
                       </button>
