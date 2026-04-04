@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { db, fetchProducts, fetchCategories, cachedQuery, invalidateCache } from '../lib/firebase'
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore'
+import { collection, query, where, orderBy, onSnapshot, doc } from 'firebase/firestore'
 import ProductCard from '../components/ProductCard'
 
 const SORT_OPTIONS = [
@@ -28,6 +28,155 @@ function SkeletonCard() {
   )
 }
 
+// ── Shop Hidden Banner ─────────────────────────────────────────────────────────
+function ShopHiddenBanner() {
+  const [tick, setTick] = useState(0)
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => (t + 1) % 4), 700)
+    return () => clearInterval(timer)
+  }, [])
+
+  const dots = ['', '.', '..', '...'][tick]
+
+  return (
+    <div style={{
+      minHeight: '70vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '32px 16px',
+    }}>
+      <div style={{
+        background: '#fff',
+        borderRadius: 28,
+        padding: 'clamp(32px, 6vw, 56px) clamp(24px, 6vw, 52px)',
+        textAlign: 'center',
+        maxWidth: 500,
+        width: '100%',
+        boxShadow: '0 8px 48px rgba(30,102,65,.12)',
+        border: '2px solid #e8ede9',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Decorative blobs */}
+        <div style={{
+          position: 'absolute', top: -50, right: -50,
+          width: 180, height: 180, borderRadius: '50%',
+          background: 'linear-gradient(135deg,#f0faf3,#d8f3dc)',
+          opacity: 0.7, pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', bottom: -70, left: -40,
+          width: 220, height: 220, borderRadius: '50%',
+          background: 'linear-gradient(135deg,#eff6ff,#dbeafe)',
+          opacity: 0.45, pointerEvents: 'none',
+        }} />
+
+        <div style={{ position: 'relative' }}>
+          {/* Animated icon */}
+          <div style={{
+            width: 'clamp(72px, 15vw, 96px)',
+            height: 'clamp(72px, 15vw, 96px)',
+            background: 'linear-gradient(135deg,#f0faf3,#d8f3dc)',
+            borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 20px',
+            border: '3px solid #b7e4c7',
+            fontSize: 'clamp(28px, 7vw, 42px)',
+            animation: 'shb-spin 3s ease-in-out infinite',
+          }}>
+            🔄
+          </div>
+
+          <h2 style={{
+            fontFamily: "'Fraunces', serif",
+            fontSize: 'clamp(20px, 5vw, 28px)',
+            fontWeight: 900,
+            color: '#1e3a2a',
+            marginBottom: 12,
+            lineHeight: 1.25,
+          }}>
+            Product Details Updating{dots}
+          </h2>
+
+          <p style={{
+            fontSize: 'clamp(13px, 3vw, 15px)',
+            color: '#5a7a68',
+            lineHeight: 1.75,
+            marginBottom: 24,
+            maxWidth: 360,
+            margin: '0 auto 24px',
+          }}>
+            We're refreshing our product catalogue with exciting new items and updated prices. Please try again in a few moments.
+          </p>
+
+          {/* Animated loading bar */}
+          <div style={{
+            width: '100%',
+            maxWidth: 280,
+            height: 6,
+            background: '#e8f5ec',
+            borderRadius: 50,
+            margin: '0 auto 28px',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%',
+              borderRadius: 50,
+              background: 'linear-gradient(90deg,#52b788,#1e6641)',
+              animation: 'shb-progress 2s ease-in-out infinite',
+            }} />
+          </div>
+
+          {/* Info chips */}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
+            {[
+              { icon: '⏱️', text: 'Back soon' },
+              { icon: '✨', text: 'New products' },
+              { icon: '💰', text: 'Better prices' },
+            ].map(({ icon, text }) => (
+              <div key={text} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                background: '#f0faf3', color: '#1e6641',
+                border: '1.5px solid #b7e4c7',
+                padding: '5px 13px', borderRadius: 50,
+                fontSize: 'clamp(11px, 2.5vw, 13px)', fontWeight: 700,
+                fontFamily: "'Nunito', sans-serif",
+              }}>
+                <span>{icon}</span> {text}
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            padding: '13px 18px',
+            background: '#f8faf8', borderRadius: 12,
+            border: '1.5px solid #e8ede9',
+          }}>
+            <div style={{ fontSize: 'clamp(11px, 2.5vw, 13px)', color: '#888', fontFamily: "'Nunito', sans-serif" }}>
+              📞 Need something urgently?{' '}
+              <span style={{ color: '#1e6641', fontWeight: 700 }}>Contact us directly!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes shb-spin {
+          0%, 100% { transform: rotate(0deg) scale(1); }
+          50% { transform: rotate(180deg) scale(1.05); }
+        }
+        @keyframes shb-progress {
+          0% { width: 0%; margin-left: 0; }
+          50% { width: 70%; margin-left: 0; }
+          100% { width: 0%; margin-left: 100%; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
 export default function Shop() {
   const [products, setProducts]     = useState([])
   const [categories, setCategories] = useState([])
@@ -38,6 +187,8 @@ export default function Shop() {
   const [activeCat, setActiveCat]   = useState(searchParams.get('category') || 'All')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [dropOpen, setDropOpen]     = useState(false)
+  const [shopHidden, setShopHidden] = useState(false)
+  const [shopStatusLoaded, setShopStatusLoaded] = useState(false)
   const dropRef    = useRef(null)
   const searchRef  = useRef(null)
   const mountedRef = useRef(true)
@@ -53,6 +204,23 @@ export default function Shop() {
   }, [searchParams])
 
   useEffect(() => { loadAll() }, [])
+
+  // ── Listen to shop visibility setting ──────────────────────────────────────
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'shop'), (snap) => {
+      if (!mountedRef.current) return
+      if (snap.exists()) {
+        setShopHidden(snap.data().allProductsHidden === true)
+      } else {
+        setShopHidden(false)
+      }
+      setShopStatusLoaded(true)
+    }, () => {
+      setShopHidden(false)
+      setShopStatusLoaded(true)
+    })
+    return () => unsub()
+  }, [])
 
   useEffect(() => {
     const q = query(collection(db, 'products'), where('active', '==', true), orderBy('category'))
@@ -162,8 +330,6 @@ export default function Shop() {
         .sp-cat-menu { position:absolute; top:calc(100% + 10px); right:0; background:#fff; border-radius:18px; box-shadow:0 16px 48px rgba(0,0,0,.18); min-width:240px; z-index:999; overflow:hidden; animation:dropIn .18s ease; }
         @keyframes dropIn { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
         .sp-cat-menu-inner { padding:8px; max-height:360px; overflow-y:auto; }
-
-        /* ── Hide the category dropdown on mobile ── */
         .sp-cat-dropdown-wrap { display:flex; }
         @media(max-width:900px) { .sp-cat-dropdown-wrap { display:none !important; } }
 
@@ -201,92 +367,105 @@ export default function Shop() {
           <div className="sp-hdr-row">
             <div className="sp-title">🛒 Shop</div>
 
-            <div className="sp-search">
-              <span style={{ color:'rgba(255,255,255,.65)', fontSize:15 }}>🔍</span>
-              <input
-                ref={searchRef}
-                placeholder="Search products..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              {search && (
-                <button className="sp-search-clear" onClick={() => { setSearch(''); searchRef.current?.focus() }}>✕</button>
-              )}
-            </div>
-
-            {/* Category dropdown — hidden on mobile via CSS */}
-            <div className="sp-cat-dropdown-wrap" style={{ position:'relative', flexShrink:0 }} ref={dropRef}>
-              <button type="button" className={`sp-cat-btn${dropOpen?' open':''}`} onClick={() => setDropOpen(o => !o)}>
-                <span style={{ fontSize:16 }}>{activeCatData?.emoji || '🛒'}</span>
-                <span>{activeCat}</span>
-                <span className={`sp-cat-arrow${dropOpen?' open':''}`}>▼</span>
-              </button>
-              {dropOpen && (
-                <div className="sp-cat-menu">
-                  <div style={{ padding:'12px 16px 8px', borderBottom:'1px solid #f0faf3' }}>
-                    <div style={{ fontSize:11, fontWeight:800, color:'#1e6641', letterSpacing:1, textTransform:'uppercase' }}>Filter by Category</div>
-                  </div>
-                  <div className="sp-cat-menu-inner"><CatList /></div>
+            {!shopHidden && (
+              <>
+                <div className="sp-search">
+                  <span style={{ color:'rgba(255,255,255,.65)', fontSize:15 }}>🔍</span>
+                  <input
+                    ref={searchRef}
+                    placeholder="Search products..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                  />
+                  {search && (
+                    <button className="sp-search-clear" onClick={() => { setSearch(''); searchRef.current?.focus() }}>✕</button>
+                  )}
                 </div>
-              )}
-            </div>
+
+                <div className="sp-cat-dropdown-wrap" style={{ position:'relative', flexShrink:0 }} ref={dropRef}>
+                  <button type="button" className={`sp-cat-btn${dropOpen?' open':''}`} onClick={() => setDropOpen(o => !o)}>
+                    <span style={{ fontSize:16 }}>{activeCatData?.emoji || '🛒'}</span>
+                    <span>{activeCat}</span>
+                    <span className={`sp-cat-arrow${dropOpen?' open':''}`}>▼</span>
+                  </button>
+                  {dropOpen && (
+                    <div className="sp-cat-menu">
+                      <div style={{ padding:'12px 16px 8px', borderBottom:'1px solid #f0faf3' }}>
+                        <div style={{ fontSize:11, fontWeight:800, color:'#1e6641', letterSpacing:1, textTransform:'uppercase' }}>Filter by Category</div>
+                      </div>
+                      <div className="sp-cat-menu-inner"><CatList /></div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         <div className="sp-body">
-          <div className="sp-toolbar">
-            <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:8 }}>
-              <div className="sp-count">
-                {loading ? '⏳ Loading...' : <>{filtered.length} <span style={{ color:'#888', fontWeight:500 }}>product{filtered.length!==1?'s':''}</span></>}
-              </div>
-              {activeCat !== 'All' && !loading && (
-                <div className="sp-badge">
-                  {activeCatData?.emoji} {activeCat}
-                  <button className="sp-badge-clear" onClick={() => setActiveCat('All')}>✕</button>
-                </div>
-              )}
-              {search && !loading && (
-                <div className="sp-badge" style={{ background:'linear-gradient(135deg,#eff6ff,#dbeafe)', color:'#1d4ed8', borderColor:'#bfdbfe' }}>
-                  🔍 "{search}"
-                  <button className="sp-badge-clear" style={{ color:'#1d4ed8' }} onClick={() => setSearch('')}>✕</button>
-                </div>
-              )}
-            </div>
-            <div className="sp-sort-wrap">
-              <label>Sort by:</label>
-              <select className="sp-sort-select" value={sort} onChange={e => setSort(e.target.value)}>
-                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="sp-grid">{Array.from({length:10}).map((_,i) => <SkeletonCard key={i} />)}</div>
-          ) : filtered.length === 0 ? (
-            <div className="sp-empty">
-              <div style={{ fontSize:72, marginBottom:16 }}>🔍</div>
-              <h3 style={{ fontFamily:'Fraunces,serif', fontSize:24, fontWeight:900, marginBottom:10, color:'#1e6641' }}>No products found</h3>
-              <p style={{ color:'#888', marginBottom:24, fontSize:15 }}>Try a different search or category</p>
-              <button onClick={() => { setSearch(''); setActiveCat('All') }}
-                style={{ background:'linear-gradient(135deg,#1a3d28,#1e6641)', color:'#fff', padding:'12px 28px', borderRadius:50, fontWeight:700, border:'none', cursor:'pointer', fontSize:14 }}>
-                Clear Filters
-              </button>
-            </div>
+          {shopStatusLoaded && shopHidden ? (
+            <ShopHiddenBanner />
           ) : (
-            <div className="sp-grid">{filtered.map(p => <ProductCard key={p.id} product={p} />)}</div>
+            <>
+              <div className="sp-toolbar">
+                <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:8 }}>
+                  <div className="sp-count">
+                    {loading ? '⏳ Loading...' : <>{filtered.length} <span style={{ color:'#888', fontWeight:500 }}>product{filtered.length!==1?'s':''}</span></>}
+                  </div>
+                  {activeCat !== 'All' && !loading && (
+                    <div className="sp-badge">
+                      {activeCatData?.emoji} {activeCat}
+                      <button className="sp-badge-clear" onClick={() => setActiveCat('All')}>✕</button>
+                    </div>
+                  )}
+                  {search && !loading && (
+                    <div className="sp-badge" style={{ background:'linear-gradient(135deg,#eff6ff,#dbeafe)', color:'#1d4ed8', borderColor:'#bfdbfe' }}>
+                      🔍 "{search}"
+                      <button className="sp-badge-clear" style={{ color:'#1d4ed8' }} onClick={() => setSearch('')}>✕</button>
+                    </div>
+                  )}
+                </div>
+                <div className="sp-sort-wrap">
+                  <label>Sort by:</label>
+                  <select className="sp-sort-select" value={sort} onChange={e => setSort(e.target.value)}>
+                    {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="sp-grid">{Array.from({length:10}).map((_,i) => <SkeletonCard key={i} />)}</div>
+              ) : filtered.length === 0 ? (
+                <div className="sp-empty">
+                  <div style={{ fontSize:72, marginBottom:16 }}>🔍</div>
+                  <h3 style={{ fontFamily:'Fraunces,serif', fontSize:24, fontWeight:900, marginBottom:10, color:'#1e6641' }}>No products found</h3>
+                  <p style={{ color:'#888', marginBottom:24, fontSize:15 }}>Try a different search or category</p>
+                  <button onClick={() => { setSearch(''); setActiveCat('All') }}
+                    style={{ background:'linear-gradient(135deg,#1a3d28,#1e6641)', color:'#fff', padding:'12px 28px', borderRadius:50, fontWeight:700, border:'none', cursor:'pointer', fontSize:14 }}>
+                    Clear Filters
+                  </button>
+                </div>
+              ) : (
+                <div className="sp-grid">{filtered.map(p => <ProductCard key={p.id} product={p} />)}</div>
+              )}
+            </>
           )}
         </div>
       </main>
 
-      <button className="sp-fab" onClick={() => setDrawerOpen(true)}>🏷️</button>
-      <div className={`sp-overlay${drawerOpen?' on':''}`} onClick={() => setDrawerOpen(false)} />
-      <div className={`sp-drawer${drawerOpen?' on':''}`}>
-        <div className="sp-drawer-hdr">
-          <h3>🏷️ Categories</h3>
-          <button className="sp-drawer-close" onClick={() => setDrawerOpen(false)}>✕</button>
-        </div>
-        <div className="sp-drawer-body"><CatList /></div>
-      </div>
+      {!shopHidden && (
+        <>
+          <button className="sp-fab" onClick={() => setDrawerOpen(true)}>🏷️</button>
+          <div className={`sp-overlay${drawerOpen?' on':''}`} onClick={() => setDrawerOpen(false)} />
+          <div className={`sp-drawer${drawerOpen?' on':''}`}>
+            <div className="sp-drawer-hdr">
+              <h3>🏷️ Categories</h3>
+              <button className="sp-drawer-close" onClick={() => setDrawerOpen(false)}>✕</button>
+            </div>
+            <div className="sp-drawer-body"><CatList /></div>
+          </div>
+        </>
+      )}
     </>
   )
 }
