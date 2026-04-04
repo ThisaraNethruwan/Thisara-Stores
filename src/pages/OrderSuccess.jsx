@@ -298,7 +298,20 @@ const handleDownloadPDF = async () => {
     doc.text('Ragama, Western Province, Sri Lanka   |   Tel: 0707779453', W / 2, pageH - 9, { align: 'center' })
     doc.text('This is a computer-generated receipt.', W / 2, pageH - 4, { align: 'center' })
 
-    doc.save(`Thisara-Order-${orderId || 'Receipt'}.pdf`)
+    // Detect iOS non-Safari (Chrome, Firefox, etc on iOS)
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+
+if (isIOS && !isSafari) {
+  // iOS Chrome/Firefox can't trigger downloads — open in new tab instead
+  const pdfBlob = doc.output('blob')
+  const blobUrl = URL.createObjectURL(pdfBlob)
+  window.open(blobUrl, '_blank')
+  // Clean up after a delay
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
+} else {
+  doc.save(`Thisara-Order-${orderId || 'Receipt'}.pdf`)
+}
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -566,7 +579,7 @@ const handleDownloadPDF = async () => {
           {/* Actions */}
           <div className="os-actions">
             <button className="os-btn-download" onClick={handleDownloadPDF}>
-               Download Receipt (PDF)
+              ⬇Download Receipt (PDF)
             </button>
             <Link to="/" className="os-btn-home">🏠 Back to Home</Link>
           </div>
