@@ -18,27 +18,52 @@ export function CartProvider({ children }) {
   const addToCart = useCallback((product, weightOption = null) => {
     setCart(prev => {
       if (weightOption) {
+        // ── Weight-based item ──────────────────────────────────────────────
+        // For custom weights, use a unique key so the same product at different
+        // weights coexists as separate line items.
+        // weightOption shape: { value: number, label: string, isCustom?: boolean }
         const key = `${product.id}_${weightOption.value}`
-        const sub = product.price_per_kg * weightOption.value
-        const ex  = prev.find(i => i.cartKey === key)
-        if (ex) return prev.map(i => i.cartKey === key
-          ? { ...i, qty: i.qty + 1, subtotal: (i.qty + 1) * sub } : i)
+        const pricePerKg = product.price_per_kg
+        const sub  = pricePerKg * weightOption.value
+
+        const ex = prev.find(i => i.cartKey === key)
+        if (ex) {
+          // Increment qty — each qty "unit" = one order of that weight amount
+          return prev.map(i => i.cartKey === key
+            ? { ...i, qty: i.qty + 1, subtotal: (i.qty + 1) * sub }
+            : i
+          )
+        }
         return [...prev, {
-          ...product, cartKey: key, qty: 1,
+          ...product,
+          cartKey:         key,
+          qty:             1,
           is_weight_based: true,
-          weight_value: weightOption.value,
-          weight_label: weightOption.label,
-          subtotal: sub,
+          weight_value:    weightOption.value,
+          weight_label:    weightOption.label,
+          is_custom_weight: weightOption.isCustom || false,
+          subtotal:        sub,
         }]
       } else {
-        const key = String(product.id)
-        const ex  = prev.find(i => i.cartKey === key)
-        if (ex) return prev.map(i => i.cartKey === key
-          ? { ...i, qty: i.qty + 1, subtotal: (i.qty + 1) * i.price } : i)
+        // ── Flat-price item ────────────────────────────────────────────────
+        // If a variant is selected the price field is already overridden in product
+        const key = product.selectedVariant
+          ? `${product.id}_${product.selectedVariant}`
+          : String(product.id)
+
+        const ex = prev.find(i => i.cartKey === key)
+        if (ex) {
+          return prev.map(i => i.cartKey === key
+            ? { ...i, qty: i.qty + 1, subtotal: (i.qty + 1) * i.price }
+            : i
+          )
+        }
         return [...prev, {
-          ...product, cartKey: key, qty: 1,
+          ...product,
+          cartKey:         key,
+          qty:             1,
           is_weight_based: false,
-          subtotal: product.price,
+          subtotal:        product.price,
         }]
       }
     })
@@ -51,16 +76,19 @@ export function CartProvider({ children }) {
     if (qty < 1) { removeFromCart(key); return }
     setCart(prev => prev.map(i => {
       if (i.cartKey !== key) return i
-      const unit = i.is_weight_based ? i.price_per_kg * i.weight_value : i.price
+      // For weight-based: unit cost = price_per_kg × weight_value
+      const unit = i.is_weight_based
+        ? i.price_per_kg * i.weight_value
+        : i.price
       return { ...i, qty, subtotal: qty * unit }
     }))
   }, [removeFromCart])
 
   const clearCart = useCallback(() => setCart([]), [])
 
-  const total = useMemo(() => cart.reduce((s, i) => s + (i.subtotal || 0), 0), [cart])
-  const count     = useMemo(() => cart.length, [cart])  // distinct products
-  const totalQty  = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart])  // total quantity
+  const total    = useMemo(() => cart.reduce((s, i) => s + (i.subtotal || 0), 0), [cart])
+  const count    = useMemo(() => cart.length, [cart])
+  const totalQty = useMemo(() => cart.reduce((s, i) => s + i.qty, 0), [cart])
 
   return (
     <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQty, clearCart, total, count, totalQty }}>
