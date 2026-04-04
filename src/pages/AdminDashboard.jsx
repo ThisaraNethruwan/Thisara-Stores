@@ -159,11 +159,11 @@ async function exportProductsPDF(products, categories) {
 
       let varLines = []
       if (p.has_variants && p.variants?.length > 0) {
-        varLines.push('Variants:')
+        varLines.push('')
         p.variants.forEach(v => {
           let s = `• ${v.label}`
           if (v.price_override !== undefined && v.price_override !== null && v.price_override !== '') {
-            s += ` (Rs.${Number(v.price_override).toLocaleString()})`
+            s += ` - (Rs.${Number(v.price_override).toLocaleString()})`
           }
           varLines.push(s)
         })
@@ -198,7 +198,7 @@ async function exportProductsPDF(products, categories) {
       pdf.roundedRect(imgX, imgY, dim, dim, 2.5, 2.5, 'D')
 
       let ty = y + 7
-      pdf.setFontSize(11)
+      pdf.setFontSize(12)
       pdf.setFont('helvetica', 'bold')
       pdf.setTextColor(20, 40, 30)
       pdf.text(nameLines, colDet, ty)
@@ -234,13 +234,13 @@ async function exportProductsPDF(products, categories) {
       py += priceLines.length * 5 + 2
 
       if (varLines.length > 0) {
-        pdf.setFontSize(8.5)
-        pdf.setFont('helvetica', 'normal')
-        pdf.setTextColor(100, 70, 175)
+        pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'bolditalic')
+        pdf.setTextColor(90, 90, 90)
         pdf.text(varLines, colPri, py)
       }
 
-      let sy = y + 7
+      let sy = y + 5
       const isHidden = !p.active
       pdf.setFontSize(9)
       pdf.setFont('helvetica', 'bold')
@@ -570,7 +570,7 @@ export default function AdminDashboard() {
   }
 
   const openNewProduct  = () => {
-    setPForm({ ...EMPTY_PRODUCT, category:categories[0]?.name||'', variants:[] })
+    setPForm({ ...EMPTY_PRODUCT, category:categories?.name||'', variants:[] })
     setEditPId(null); setShowPF(true)
   }
   const openEditProduct = (p) => {
@@ -987,7 +987,7 @@ export default function AdminDashboard() {
         /* product status banner */
         .shop-status-banner { display:flex; align-items:center; gap:10px; background:#fff9ec; border:1.5px solid #fcd34d; border-radius:12px; padding:10px 16px; margin-bottom:0; }
 
-        order-filter-row { padding:12px 20px; border-bottom:1.5px solid #f0faf3; display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+        .order-filter-row { padding:12px 20px; border-bottom:1.5px solid #f0faf3; display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
         .of-pill { display:inline-flex; align-items:center; gap:5px; padding:6px 14px; border-radius:50px; border:1.5px solid #e8ede9; background:#fff; color:#666; font-size:12px; font-weight:700; cursor:pointer; font-family:'Nunito',sans-serif; transition:all .15s; }
         .of-pill.active { background:#1e6641; color:#fff; border-color:#1e6641; }
         .of-pill-cnt { background:rgba(255,255,255,.3); border-radius:50px; padding:0 7px; font-size:11px; font-weight:800; }
@@ -1043,7 +1043,10 @@ export default function AdminDashboard() {
         .add-variant-btn:hover { background:#f5f3ff; }
         .variant-hint { font-size:11px; color:#8b5cf6; background:#ede9fe; border-radius:8px; padding:8px 12px; margin-top:10px; line-height:1.5; }
 
-        /* ── Mobile Breakpoints ── */
+        /* ── Breakpoints & Responsive Utilities ── */
+        .mob-only  { display:none !important; }
+        .prod-actions-mobile { display:none !important; width:100%; flex-direction:column; gap:8px; }
+
         @media(max-width:1100px) {
           .adm-stats { grid-template-columns:repeat(2,1fr); }
           .prod-search { width:140px; }
@@ -1057,6 +1060,7 @@ export default function AdminDashboard() {
           .fm-row { grid-template-columns:1fr; }
           .desk-only { display:none !important; }
           .mob-only  { display:block !important; }
+          .prod-actions-mobile { display:flex !important; }
           .mob-filter-select { display:block; }
           .variant-row { grid-template-columns:1fr 100px 32px; }
 
@@ -1084,33 +1088,14 @@ export default function AdminDashboard() {
           .adm-btn-pdf  { width:100%; }
           .adm-btn-primary { width:100%; }
         }
-        .mob-only  { display:none; }
         .live-dot  { width:8px; height:8px; border-radius:50%; background:#22c55e; display:inline-block; animation:pulseLive 2s ease infinite; }
-        .order-filter-row { padding:12px 20px; border-bottom:1.5px solid #f0faf3; display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
       `}</style>
 
       <div className="adm">
         <div className="adm-sidebar"><SidebarContent /></div>
 
         <div className="adm-main">
-          {/* Top bar */}
-          <div className="adm-topbar">
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <button className="adm-hamburger" onClick={() => setSidebarOpen(true)}><span/><span/><span/></button>
-              <div className="adm-topbar-title">{TABS.find(t=>t.id===tab)?.icon} {TABS.find(t=>t.id===tab)?.label}</div>
-            </div>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              {shopHidden && (
-                <div style={{ display:'flex', alignItems:'center', gap:6, background:'rgba(230,57,70,.1)', border:'1.5px solid rgba(230,57,70,.25)', color:'#e63946', padding:'4px 12px', borderRadius:50, fontSize:11, fontWeight:700 }}>
-                  <span style={{ width:7, height:7, borderRadius:'50%', background:'#e63946', display:'inline-block', animation:'pulseWarn 2s ease infinite' }} />
-                  Shop Hidden
-                </div>
-              )}
-              <div style={{ display:'flex', alignItems:'center', gap:6, background:'#f0faf3', border:'1.5px solid #d8f3dc', color:'#1e6641', padding:'4px 12px', borderRadius:50, fontSize:11, fontWeight:700 }}>
-                <span className="live-dot"/> Live
-              </div>
-            </div>
-          </div>
+
 
           <div className="adm-content">
 
@@ -1316,8 +1301,8 @@ export default function AdminDashboard() {
                       <button className="adm-btn adm-btn-primary" onClick={openNewProduct}>+ Add Product</button>
                     </div>
 
-                    {/* Mobile: stacked rows */}
-                    <div className="mob-only" style={{ width:'100%', display:'flex', flexDirection:'column', gap:8 }}>
+                    {/* Mobile: stacked rows using clean CSS class instead of inline flex */}
+                    <div className="prod-actions-mobile">
                       {/* Row 1: Search (full width) */}
                       <input
                         className="adm-search"
@@ -1368,13 +1353,12 @@ export default function AdminDashboard() {
                   {shopHidden && (
                     <div style={{
                       marginTop:12, display:'flex', alignItems:'center', gap:10,
-                      background:'#fff9ec', border:'1.5px solid #fcd34d',
+                      background:'#ffecec', border:'1.5px solid #fc4d4d',
                       borderRadius:10, padding:'9px 14px',
                     }}>
                       <span style={{ fontSize:18 }}>🙈</span>
                       <div>
-                        <div style={{ fontSize:13, fontWeight:800, color:'#92400e' }}>Shop is currently hidden from customers</div>
-                        <div style={{ fontSize:11, color:'#b45309' }}>Customers see a "Products updating" message. Click "Show Shop" to restore.</div>
+                        <div style={{ fontSize:13, fontWeight:800, color:'#920e0e' }}>Shop is currently hidden from customers</div>
                       </div>
                     </div>
                   )}
@@ -1602,7 +1586,7 @@ export default function AdminDashboard() {
               </div>
             )}
             <Field label="Product Image">
-              <input type="file" accept="image/*" style={{ fontSize:13 }} onChange={async e => { const url = await uploadImage(e.target.files[0]); if(url) setPForm(f=>({...f,image_url:url})) }} />
+              <input type="file" accept="image/*" style={{ fontSize:13 }} onChange={async e => { const url = await uploadImage(e.target.files); if(url) setPForm(f=>({...f,image_url:url})) }} />
               {uploading && <div style={{ fontSize:12, color:'#1e6641', marginTop:6, fontWeight:600 }}>⏳ Uploading...</div>}
               {!uploading && pForm.image_url && (
                 <div style={{ marginTop:8 }}>
