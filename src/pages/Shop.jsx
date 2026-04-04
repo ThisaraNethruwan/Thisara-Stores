@@ -433,9 +433,17 @@ export default function Shop() {
                 </div>
               </div>
 
-              {loading ? (
-                <div className="sp-grid">{Array.from({length:10}).map((_,i) => <SkeletonCard key={i} />)}</div>
+{products.length === 0 ? (
+                /* NEW: Shows when ALL products are hidden or database is empty */
+                <div className="sp-empty">
+                  <div style={{ fontSize: 64, marginBottom: 16 }}>⚙️</div>
+                  <h3 style={{ fontFamily:'Fraunces,serif', fontSize:24, fontWeight:900, marginBottom:10, color:'#1e6641' }}>
+                    Product details updating at the moment.
+                  </h3>
+                  <p style={{ color:'#888', marginBottom:24, fontSize:15 }}>Please try again later.</p>
+                </div>
               ) : filtered.length === 0 ? (
+                /* EXISTING: Shows when a search/filter yields no results */
                 <div className="sp-empty">
                   <div style={{ fontSize:72, marginBottom:16 }}>🔍</div>
                   <h3 style={{ fontFamily:'Fraunces,serif', fontSize:24, fontWeight:900, marginBottom:10, color:'#1e6641' }}>No products found</h3>
@@ -446,6 +454,7 @@ export default function Shop() {
                   </button>
                 </div>
               ) : (
+                /* EXISTING: Shows the actual products */
                 <div className="sp-grid">{filtered.map(p => <ProductCard key={p.id} product={p} />)}</div>
               )}
             </>
