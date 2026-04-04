@@ -1,54 +1,20 @@
-import { useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 export default function OrderSuccess() {
   const { state } = useLocation()
 
-
-  const name         = state?.name        || 'Customer'
-  const orderId      = state?.orderId     || null
-  const method       = state?.method      || 'cod'
-  const total        = state?.total       || 0
-  const subtotal     = state?.subtotal    || 0
-  const deliveryFee  = state?.deliveryFee ?? 0
-  const phone        = state?.phone       || ''
-  const address      = state?.address     || ''
-  const note         = state?.note        || ''
-  const items        = state?.items       || []
-  const placedAt     = state?.placedAt    || new Date().toISOString()
-  const isPaid         = method === 'card'
-  const receiptRef     = useRef(null)
-
-  const handleDownloadPDF = async () => {
-  const { default: jsPDF }      = await import('jspdf')
-  const { default: html2canvas } = await import('html2canvas')
-
-  const el = receiptRef.current
-  if (!el) return
-
-  // Temporarily make it visible for capture
-  el.style.display = 'block'
-  el.style.position = 'fixed'
-  el.style.top = '-9999px'
-  el.style.left = '0'
-  el.style.width = '794px'   // A4 width in px at 96dpi
-
-  const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#fff' })
-
-  el.style.display = 'none'
-  el.style.position = ''
-  el.style.top = ''
-  el.style.left = ''
-  el.style.width = ''
-
-  const imgData = canvas.toDataURL('image/png')
-  const pdf     = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
-  const pdfW    = pdf.internal.pageSize.getWidth()
-  const pdfH    = (canvas.height * pdfW) / canvas.width
-
-  pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH)
-  pdf.save(`Order-${orderId || 'Receipt'}.pdf`)
-}
+  const name          = state?.name        || 'Customer'
+  const orderId       = state?.orderId     || null
+  const method        = state?.method      || 'cod'
+  const total         = state?.total       || 0
+  const subtotal      = state?.subtotal    || 0
+  const deliveryFee   = state?.deliveryFee ?? 0
+  const phone         = state?.phone       || ''
+  const address       = state?.address     || ''
+  const note          = state?.note        || ''
+  const items         = state?.items       || []
+  const placedAt      = state?.placedAt    || new Date().toISOString()
+  const isPaid        = method === 'card'
   const isFreeDelivery = deliveryFee === 0 && subtotal > 0
 
   const formattedDate = new Date(placedAt).toLocaleString('en-LK', {
@@ -56,13 +22,291 @@ export default function OrderSuccess() {
     day: 'numeric', hour: '2-digit', minute: '2-digit',
   })
 
+  // ── PDF Download using jsPDF (text-based, perfectly structured) ─────────
+const handleDownloadPDF = async () => {
+    const jsPDFModule = await import('jspdf')
+    const jsPDF = jsPDFModule.default
+    const autoTableModule = await import('jspdf-autotable')
+    const autoTable = autoTableModule.default
+
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+    const W = doc.internal.pageSize.getWidth()
+    const pageH = doc.internal.pageSize.getHeight()
+
+    // ── Palette ──────────────────────────────────────────────
+    const dkGreen  = [13, 38, 24]
+    const green    = [28, 98, 62]
+    const midGreen = [44, 130, 85]
+    const ltGreen  = [236, 248, 240]
+    const white    = [255, 255, 255]
+    const offWhite = [249, 252, 250]
+    const silver   = [155, 165, 160]
+    const ink      = [22, 22, 22]
+    const rule     = [220, 234, 224]
+
+    // ── Load logo ────────────────────────────────────────────
+    let logoBase64 = null
+    try {
+      const res  = await fetch('/logo-round.png')
+      const blob = await res.blob()
+      logoBase64 = await new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result)
+        reader.readAsDataURL(blob)
+      })
+    } catch (_) {}
+
+    let y = 0
+
+    // ══════════════════════════════════════════════════════════
+    // HEADER  — compact dark band
+    // ══════════════════════════════════════════════════════════
+    const HDR_H = 26
+    doc.setFillColor(...dkGreen)
+    doc.rect(0, 0, W, HDR_H, 'F')
+
+    // subtle accent stripe
+    doc.setFillColor(...green)
+    doc.rect(0, HDR_H - 2, W, 2, 'F')
+
+    // Logo — small circle on left
+    const LOGO_SIZE = 16
+    const LOGO_X    = 12
+    const LOGO_Y    = (HDR_H - LOGO_SIZE) / 2
+    if (logoBase64) {
+      // white circle bg behind logo
+      doc.setFillColor(...white)
+      doc.circle(LOGO_X + LOGO_SIZE / 2, LOGO_Y + LOGO_SIZE / 2, LOGO_SIZE / 2 + 0.8, 'F')
+      doc.addImage(logoBase64, 'PNG', LOGO_X, LOGO_Y, LOGO_SIZE, LOGO_SIZE, '', 'FAST')
+    } else {
+      doc.setFillColor(...green)
+      doc.circle(LOGO_X + LOGO_SIZE / 2, LOGO_Y + LOGO_SIZE / 2, LOGO_SIZE / 2, 'F')
+    }
+
+    // Shop name + tagline
+    const TEXT_X = LOGO_X + LOGO_SIZE + 5
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(13)
+    doc.setTextColor(...white)
+    doc.text('Thisara Stores', TEXT_X, HDR_H / 2 - 1)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(6.5)
+    doc.setTextColor(160, 210, 180)
+    doc.text('Ragama, Western Province, Sri Lanka   |   Tel: 0707779453', TEXT_X, HDR_H / 2 + 5)
+
+    // Right: ORDER RECEIPT + ID + date
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(6.5)
+    doc.setTextColor(160, 210, 180)
+    doc.text('ORDER RECEIPT', W - 12, 8, { align: 'right' })
+
+    doc.setFontSize(11)
+    doc.setTextColor(...white)
+    doc.text(orderId ? `#${orderId}` : 'N/A', W - 12, 15, { align: 'right' })
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(6.5)
+    doc.setTextColor(160, 210, 180)
+    doc.text(formattedDate, W - 12, 21, { align: 'right' })
+
+    y = HDR_H + 9
+
+    // ══════════════════════════════════════════════════════════
+    // CUSTOMER INFORMATION
+    // ══════════════════════════════════════════════════════════
+    // Section label
+    doc.setFillColor(...ltGreen)
+    doc.roundedRect(14, y, W - 28, 6.5, 1.5, 1.5, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7)
+    doc.setTextColor(...green)
+    doc.text('CUSTOMER INFORMATION', 18, y + 4.3)
+    y += 10
+
+    const infoRows = [
+      ['Customer',        name],
+      ['Phone',           phone || '-'],
+      ['Delivery Address', address || '-'],
+      ['Payment',         isPaid ? 'Card Payment  (Paid)' : 'Cash on Delivery'],
+    ]
+    if (note) infoRows.push(['Special Request', note])
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: 14, right: 14 },
+      tableWidth: W - 28,
+      head: [],
+      body: infoRows,
+      theme: 'plain',
+      styles: {
+        fontSize: 9,
+        cellPadding: { top: 3, bottom: 3, left: 3, right: 3 },
+        overflow: 'linebreak',
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', textColor: silver, cellWidth: 38 },
+        1: { textColor: ink },
+      },
+      didDrawCell: (data) => {
+        if (data.row.index < infoRows.length - 1 && data.column.index === 1) {
+          doc.setDrawColor(...rule)
+          doc.setLineWidth(0.25)
+          doc.line(14, data.cell.y + data.cell.height, W - 14, data.cell.y + data.cell.height)
+        }
+      },
+    })
+
+    y = doc.lastAutoTable.finalY + 10
+
+    // ══════════════════════════════════════════════════════════
+    // ORDER ITEMS
+    // ══════════════════════════════════════════════════════════
+    doc.setFillColor(...ltGreen)
+    doc.roundedRect(14, y, W - 28, 6.5, 1.5, 1.5, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7)
+    doc.setTextColor(...green)
+    doc.text('ORDER ITEMS', 18, y + 4.3)
+    y += 10
+
+    const itemRows = items.map((item, i) => [
+      `${i + 1}`,
+      item.name + (item.selectedVariant ? `  [${item.selectedVariant}]` : ''),
+      item.isWeightBased ? item.weightLabel : `x${item.qty}`,
+      item.isWeightBased
+        ? `Rs. ${Number(item.price || 0).toLocaleString()}/kg`
+        : `Rs. ${Number(item.price || 0).toLocaleString()}`,
+      `Rs. ${Number(item.subtotal || 0).toLocaleString()}`,
+    ])
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: 14, right: 14 },
+      tableWidth: W - 28,
+      head: [['#', 'Item', 'Qty / Weight', 'Unit Price', 'Subtotal']],
+      body: itemRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: green,
+        textColor: white,
+        fontStyle: 'bold',
+        fontSize: 8,
+        cellPadding: { top: 4, bottom: 4, left: 3, right: 3 },
+        halign: 'left',
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: ink,
+        cellPadding: { top: 3.5, bottom: 3.5, left: 3, right: 3 },
+        overflow: 'linebreak',
+      },
+      alternateRowStyles: { fillColor: offWhite },
+      columnStyles: {
+        0: { cellWidth: 9,  halign: 'center', textColor: silver, fontSize: 8 },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 28, halign: 'center' },
+        3: { cellWidth: 32, halign: 'right' },
+        4: { cellWidth: 28, halign: 'right', fontStyle: 'bold', textColor: green },
+      },
+      styles: { lineColor: rule, lineWidth: 0.25 },
+    })
+
+    y = doc.lastAutoTable.finalY + 8
+
+    // ══════════════════════════════════════════════════════════
+    // TOTALS  — right-aligned compact block
+    // ══════════════════════════════════════════════════════════
+    const TW = 76          // totals block width
+    const TX = W - 14 - TW // left edge of block
+
+    // thin top rule across full width
+    doc.setDrawColor(...rule)
+    doc.setLineWidth(0.3)
+    doc.line(14, y - 2, W - 14, y - 2)
+
+    // Row helper
+    const drawTotalRow = (label, value, bgColor, labelColor, valueColor, rowH = 9) => {
+      doc.setFillColor(...bgColor)
+      doc.rect(TX, y, TW, rowH, 'F')
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(...labelColor)
+      doc.text(label, TX + 5, y + rowH / 2 + 1.5)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(...valueColor)
+      doc.text(value, TX + TW - 5, y + rowH / 2 + 1.5, { align: 'right' })
+      // bottom rule
+      doc.setDrawColor(...rule)
+      doc.setLineWidth(0.25)
+      doc.line(TX, y + rowH, TX + TW, y + rowH)
+      y += rowH
+    }
+
+    drawTotalRow(
+      'Items Subtotal',
+      `Rs. ${Number(subtotal).toLocaleString()}`,
+      offWhite, silver, ink
+    )
+    drawTotalRow(
+      'Delivery Fee',
+      isFreeDelivery ? 'FREE' : `Rs. ${Number(deliveryFee).toLocaleString()}`,
+      offWhite, silver, isFreeDelivery ? green : ink
+    )
+
+    // Grand total — taller dark row
+    const GT_H = 13
+    doc.setFillColor(...green)
+    doc.roundedRect(TX, y, TW, GT_H, 2, 2, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7.5)
+    doc.setTextColor(150, 205, 170)
+    doc.text('GRAND TOTAL', TX + 5, y + 5)
+    doc.setFontSize(12)
+    doc.setTextColor(...white)
+    doc.text(`Rs. ${Number(total).toLocaleString()}`, TX + TW - 5, y + 10, { align: 'right' })
+    y += GT_H + 4
+
+    // Payment pill
+    doc.setFillColor(...ltGreen)
+    doc.setDrawColor(...midGreen)
+    doc.setLineWidth(0.4)
+    doc.roundedRect(TX, y, TW, 7.5, 2, 2, 'FD')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7.5)
+    doc.setTextColor(...green)
+    doc.text(
+      isPaid ? 'Card Payment - Paid' : 'Cash on Delivery',
+      TX + TW / 2, y + 5, { align: 'center' }
+    )
+
+    // ══════════════════════════════════════════════════════════
+    // FOOTER
+    // ══════════════════════════════════════════════════════════
+    // thin rule above footer
+    doc.setDrawColor(...rule)
+    doc.setLineWidth(0.4)
+    doc.line(14, pageH - 20, W - 14, pageH - 20)
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8.5)
+    doc.setTextColor(...green)
+    doc.text('Thank you for shopping with Thisara Stores!', W / 2, pageH - 14, { align: 'center' })
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    doc.setTextColor(...silver)
+    doc.text('Ragama, Western Province, Sri Lanka   |   Tel: 0707779453', W / 2, pageH - 9, { align: 'center' })
+    doc.text('This is a computer-generated receipt.', W / 2, pageH - 4, { align: 'center' })
+
+    doc.save(`Thisara-Order-${orderId || 'Receipt'}.pdf`)
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
-        /* ── Global screen hide ── */
         footer, .footer, #footer { display: none !important; }
 
-        /* ── Screen layout ── */
         .os-page {
           min-height: 100vh;
           background: linear-gradient(160deg, #f0faf3 0%, #fffbf0 60%, #f5f0e8 100%);
@@ -74,7 +318,7 @@ export default function OrderSuccess() {
 
         .os-banner {
           background: linear-gradient(135deg, #0f2d1c 0%, #1a3d28 50%, #1e6641 100%);
-          border-radius: 24px; padding: 25px 28px 10px;
+          border-radius: 24px; padding: 25px 28px 22px;
           color: #fff; position: relative; overflow: hidden;
           animation: osSlideUp 0.55s cubic-bezier(0.16,1,0.3,1) both;
         }
@@ -83,7 +327,7 @@ export default function OrderSuccess() {
           background: radial-gradient(circle at 80% 30%, rgba(82,183,136,.28) 0%, transparent 55%);
         }
         .os-banner-inner { position: relative; z-index: 1; }
-        .os-banner-top { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+        .os-banner-top { display: flex; align-items: center; gap: 16px; margin-bottom: 4px; }
         .os-logo {
           width: 60px; height: 60px; border-radius: 50%; overflow: hidden;
           border: 3px solid rgba(255,255,255,.35); flex-shrink: 0;
@@ -93,13 +337,6 @@ export default function OrderSuccess() {
         .os-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .os-banner-title { font-family: 'Fraunces', serif; font-size: 30px; font-weight: 900; color: #fff; line-height: 1.1; }
         .os-banner-sub { font-size: 14px; color: rgba(255,255,255,.75); margin-top: 3px; }
-        .os-badges { display: flex; flex-wrap: wrap; gap: 8px; }
-        .os-badge {
-          display: inline-flex; align-items: center; gap: 5px;
-          background: rgba(255,255,255,.15); border: 1.5px solid rgba(255,255,255,.25);
-          padding: 6px 14px; border-radius: 50px; font-size: 12px; font-weight: 700; color: #fff;
-        }
-        .os-badge.gold { background: rgba(244,163,34,.25); border-color: rgba(244,163,34,.5); color: #fcd34d; }
 
         .os-receipt {
           background: #fff; border-radius: 22px; overflow: hidden;
@@ -119,13 +356,15 @@ export default function OrderSuccess() {
           background: #d8f3dc; padding: 5px 12px; border-radius: 50px;
           white-space: nowrap; letter-spacing: .3px;
         }
+
         .os-info-grid { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1.5px solid #f0f5f1; }
         .os-info-cell { padding: 14px 20px; border-right: 1.5px solid #f0f5f1; }
         .os-info-cell:last-child { border-right: none; }
-        .os-info-cell:nth-child(3), .os-info-cell:nth-child(4) { border-top: 1.5px solid #f0f5f1; }
+        .os-info-cell:nth-child(n+3) { border-top: 1.5px solid #f0f5f1; }
         .os-info-label { font-size: 10px; font-weight: 800; color: #94a89e; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 4px; }
         .os-info-value { font-size: 13px; font-weight: 700; color: #1a1a1a; line-height: 1.5; }
-        .os-info-address { grid-column: 1 / -1; border-right: none !important; }
+        .os-info-full { grid-column: 1 / -1; border-right: none !important; }
+
         .os-items-hdr {
           padding: 14px 20px 10px; font-size: 10px; font-weight: 800; color: #94a89e;
           text-transform: uppercase; letter-spacing: .6px;
@@ -138,6 +377,7 @@ export default function OrderSuccess() {
         .os-item-meta { font-size: 11px; color: #888; margin-top: 2px; font-weight: 500; }
         .os-item-variant { display: inline-flex; align-items: center; background: #ede9fe; color: #5b21b6; font-size: 10px; font-weight: 700; padding: 1px 8px; border-radius: 50px; margin-left: 6px; vertical-align: middle; }
         .os-item-price { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 900; color: #1e6641; white-space: nowrap; }
+
         .os-totals { padding: 14px 20px; border-top: 1.5px solid #f0f5f1; }
         .os-total-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; font-size: 13px; color: #555; }
         .os-total-row + .os-total-row { border-top: 1px solid #f8faf8; }
@@ -150,6 +390,7 @@ export default function OrderSuccess() {
         .os-grand-total-val { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 900; color: #fff; }
         .os-payment-tag { font-size: 11px; font-weight: 700; background: rgba(255,255,255,.15); color: #d8f3dc; padding: 3px 10px; border-radius: 50px; margin-top: 4px; display: inline-block; }
         .os-note { margin: 0 20px 14px; background: #fffbec; border: 1.5px solid #fde68a; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #92400e; line-height: 1.6; }
+
         .os-steps-card {
           background: #fff; border-radius: 22px; box-shadow: 0 4px 28px rgba(0,0,0,.07);
           padding: 20px 22px;
@@ -164,8 +405,9 @@ export default function OrderSuccess() {
         .os-step-text { font-size: 13px; font-weight: 600; }
         .os-step-text.done { color: #1e3a2a; }
         .os-step-text.pending { color: #aaa; }
+
         .os-actions { display: flex; flex-direction: column; gap: 10px; animation: osSlideUp 0.55s 0.26s cubic-bezier(0.16,1,0.3,1) both; }
-        .os-btn-print {
+        .os-btn-download {
           width: 100%; padding: 15px 20px; border-radius: 14px; border: none;
           background: linear-gradient(135deg, #1a3d28, #1e6641);
           color: #fff; font-family: 'Nunito', sans-serif;
@@ -173,7 +415,7 @@ export default function OrderSuccess() {
           display: flex; align-items: center; justify-content: center; gap: 8px;
           box-shadow: 0 6px 20px rgba(30,102,65,.3); transition: transform .2s, box-shadow .2s;
         }
-        .os-btn-print:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(30,102,65,.38); }
+        .os-btn-download:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(30,102,65,.38); }
         .os-btn-home {
           width: 100%; padding: 14px 20px; border-radius: 14px;
           border: 2px solid #1e6641; background: transparent; color: #1e6641;
@@ -182,8 +424,10 @@ export default function OrderSuccess() {
           text-decoration: none; transition: background .2s;
         }
         .os-btn-home:hover { background: #f0faf3; }
+
         @keyframes osSlideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes osPopIn   { from { opacity: 0; transform: scale(.6); }        to { opacity: 1; transform: scale(1); } }
+
         @media (max-width: 480px) {
           .os-banner { padding: 24px 18px 20px; }
           .os-banner-title { font-size: 24px; }
@@ -193,166 +437,13 @@ export default function OrderSuccess() {
           .os-receipt-hdr { flex-direction: column; gap: 8px; }
         }
 
-        /* ═══════════════════════════════════════
-           PRINT STYLES — clean A4 invoice
-           ═══════════════════════════════════════ */
-        @media print {
-          @page { size: A4; margin: 16mm; }
-
-          /* Hide all screen UI */
-          .os-page,
-          .os-steps-card,
-          .os-actions,
-          nav, .nav-wrap,
-          footer, .footer, #footer { display: none !important; }
-
-          /* Show the receipt wrapper */
-          .os-receipt-print-wrap {
-            display: block !important;
-            font-family: 'Nunito', sans-serif;
-            color: #111;
-          }
-
-          /* Invoice header */
-          .rp-header {
-            display: flex !important;
-            justify-content: space-between;
-            align-items: flex-start;
-            padding-bottom: 14px;
-            margin-bottom: 18px;
-            border-bottom: 2.5px solid #1e6641;
-          }
-          .rp-logo-row { display: flex !important; align-items: center; gap: 12px; }
-          .rp-logo {
-            width: 48px; height: 48px;
-            border-radius: 50%; overflow: hidden;
-            border: 2px solid #1e6641;
-            flex-shrink: 0;
-          }
-          .rp-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-          .rp-shop-name { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 900; color: #1e6641; display: block; }
-          .rp-shop-sub  { font-size: 10.5px; color: #666; display: block; margin-top: 1px; line-height: 1.5; }
-          .rp-right { text-align: right; }
-          .rp-label { font-size: 9px; font-weight: 800; color: #999; letter-spacing: 2px; text-transform: uppercase; display: block; }
-          .rp-oid   { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 900; color: #1e6641; display: block; margin-top: 2px; }
-          .rp-date  { font-size: 10px; color: #666; display: block; margin-top: 2px; }
-
-          /* Customer info table */
-          .rp-info-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 18px;
-            border: 1px solid #e0e0e0;
-          }
-          .rp-info-table td {
-            padding: 8px 12px;
-            font-size: 12px;
-            border: 1px solid #e0e0e0;
-            vertical-align: top;
-          }
-          .rp-info-table td:first-child {
-            font-weight: 800;
-            color: #555;
-            width: 28%;
-            background: #f8faf8;
-          }
-
-          /* Items table */
-          .rp-items-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 14px;
-          }
-          .rp-items-table th {
-            background: #1e6641;
-            color: #fff;
-            font-size: 10px;
-            font-weight: 800;
-            letter-spacing: .5px;
-            text-transform: uppercase;
-            padding: 8px 10px;
-            text-align: left;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .rp-items-table th:last-child { text-align: right; }
-          .rp-items-table td {
-            padding: 9px 10px;
-            font-size: 12px;
-            border-bottom: 1px solid #efefef;
-            vertical-align: top;
-          }
-          .rp-items-table td:last-child { text-align: right; font-weight: 700; }
-          .rp-items-table tr:last-child td { border-bottom: none; }
-          .rp-items-table tr:nth-child(even) td { background: #fafaf8; }
-          .rp-item-variant {
-            display: inline-block;
-            background: #ede9fe;
-            color: #5b21b6;
-            font-size: 9px;
-            font-weight: 700;
-            padding: 1px 6px;
-            border-radius: 50px;
-            margin-left: 4px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .rp-item-sub { font-size: 10px; color: #888; margin-top: 2px; }
-
-          /* Totals */
-          .rp-totals {
-            width: 260px;
-            margin-left: auto;
-            border-collapse: collapse;
-            margin-bottom: 18px;
-          }
-          .rp-totals td { padding: 5px 10px; font-size: 12px; }
-          .rp-totals td:last-child { text-align: right; font-weight: 700; }
-          .rp-totals tr:not(:last-child) td { border-bottom: 1px solid #efefef; }
-          .rp-total-grand td {
-            background: #1e6641;
-            color: #fff;
-            font-family: 'Fraunces', serif;
-            font-size: 14px;
-            font-weight: 900;
-            padding: 9px 10px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-
-          /* Note */
-          .rp-note {
-            background: #fffbec;
-            border: 1px solid #fde68a;
-            border-radius: 6px;
-            padding: 8px 12px;
-            font-size: 11px;
-            color: #92400e;
-            margin-bottom: 14px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-
-          /* Footer */
-          .rp-footer {
-            margin-top: 20px;
-            padding-top: 12px;
-            border-top: 1px solid #e0e0e0;
-            text-align: center;
-            font-size: 10px;
-            color: #aaa;
-            line-height: 1.7;
-          }
-        }
-
-        /* Screen: hide print-only elements */
-        .os-receipt-print-wrap { display: none; }
+        @media print { * { display: none !important; } }
       `}</style>
 
-      {/* ── SCREEN VIEW ─────────────────────────────────────── */}
       <main className="os-page">
         <div className="os-wrap">
 
+          {/* Banner */}
           <div className="os-banner">
             <div className="os-banner-inner">
               <div className="os-banner-top">
@@ -364,10 +455,10 @@ export default function OrderSuccess() {
                   <div className="os-banner-sub">Thank you, <strong>{name}</strong>!</div>
                 </div>
               </div>
-           
             </div>
           </div>
 
+          {/* Receipt card */}
           <div className="os-receipt">
             <div className="os-receipt-hdr">
               <div>
@@ -386,11 +477,15 @@ export default function OrderSuccess() {
                 <div className="os-info-label">Phone</div>
                 <div className="os-info-value">{phone || '—'}</div>
               </div>
-              <div className="os-info-cell os-info-address">
+              <div className="os-info-cell os-info-full">
                 <div className="os-info-label">Delivery Address</div>
                 <div className="os-info-value" style={{ fontWeight: 600, fontSize: 12, color: '#444' }}>
                   {address || '—'}
                 </div>
+              </div>
+              <div className="os-info-cell os-info-full" style={{ borderTop: '1.5px solid #f0f5f1' }}>
+                <div className="os-info-label">Payment</div>
+                <div className="os-info-value">{isPaid ? '💳 Card Payment' : '💵 Cash on Delivery'}</div>
               </div>
             </div>
 
@@ -447,133 +542,37 @@ export default function OrderSuccess() {
             </div>
           </div>
 
-      
+          {/* What happens next */}
+          <div className="os-steps-card">
+            <div className="os-steps-title">What happens next?</div>
+            <div className="os-step">
+              <div className="os-step-ico done">✅</div>
+              <div className="os-step-text done">Order received & confirmed</div>
+            </div>
+            <div className="os-step">
+              <div className="os-step-ico done">📦</div>
+              <div className="os-step-text done">We're packing your items</div>
+            </div>
+            <div className="os-step">
+              <div className="os-step-ico pending">🚚</div>
+              <div className="os-step-text pending">Out for delivery</div>
+            </div>
+            <div className="os-step">
+              <div className="os-step-ico pending">🏠</div>
+              <div className="os-step-text pending">Delivered to your door</div>
+            </div>
+          </div>
 
+          {/* Actions */}
           <div className="os-actions">
-            <button className="os-btn-print" onClick={handleDownloadPDF}>
-  ⬇ Download Receipt (PDF)
-</button>
+            <button className="os-btn-download" onClick={handleDownloadPDF}>
+              ⬇️ Download Receipt (PDF)
+            </button>
             <Link to="/" className="os-btn-home">🏠 Back to Home</Link>
           </div>
 
         </div>
       </main>
-
-      {/* ── PRINT-ONLY RECEIPT ───────────────────────────────── */}
-      {/* display:none on screen; shown via @media print */}
-      <div className="os-receipt-print-wrap" ref={receiptRef}>
-        {/* Header */}
-        <div className="rp-header">
-          <div className="rp-logo-row">
-            <div className="rp-logo">
-              <img src="/logo-round.png" alt="Thisara Stores" />
-            </div>
-            <div>
-              <span className="rp-shop-name">Thisara Stores</span>
-              <span className="rp-shop-sub">Ragama, Western Province, Sri Lanka</span>
-              <span className="rp-shop-sub">Tel: 0707779453</span>
-            </div>
-          </div>
-          <div className="rp-right">
-            <span className="rp-label">Order Receipt</span>
-            <span className="rp-oid">{orderId ? `#${orderId}` : 'N/A'}</span>
-            <span className="rp-date">{formattedDate}</span>
-          </div>
-        </div>
-
-        {/* Customer info */}
-        <table className="rp-info-table">
-          <tbody>
-            <tr>
-              <td>Customer</td>
-              <td>{name}</td>
-            </tr>
-            <tr>
-              <td>Phone</td>
-              <td>{phone || '—'}</td>
-            </tr>
-            <tr>
-              <td>Delivery Address</td>
-              <td>{address || '—'}</td>
-            </tr>
-            <tr>
-              <td>Payment Method</td>
-              <td>{isPaid ? 'Card Payment' : 'Cash on Delivery'}</td>
-            </tr>
-            {note && (
-              <tr>
-                <td>Special Request</td>
-                <td>{note}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-
-        {/* Items table */}
-        {items.length > 0 && (
-          <table className="rp-items-table">
-            <thead>
-              <tr>
-                <th style={{ width: '40%' }}>Item</th>
-                <th>Details</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, i) => (
-                <tr key={i}>
-                  <td>
-                    {item.name}
-                    {item.selectedVariant && (
-                      <span className="rp-item-variant">{item.selectedVariant}</span>
-                    )}
-                  </td>
-                  <td>
-                    {item.isWeightBased ? `Weight based` : `Fixed price`}
-                  </td>
-                  <td>
-                    {item.isWeightBased ? item.weightLabel : `×${item.qty}`}
-                  </td>
-                  <td>
-                    {item.isWeightBased
-                      ? `Rs. ${Number(item.price || 0).toLocaleString()}/kg`
-                      : `Rs. ${Number(item.price || 0).toLocaleString()}`}
-                  </td>
-                  <td>Rs. {Number(item.subtotal || 0).toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-
-        {/* Totals */}
-        <table className="rp-totals">
-          <tbody>
-            <tr>
-              <td>Items Subtotal</td>
-              <td>Rs. {Number(subtotal).toLocaleString()}</td>
-            </tr>
-            <tr>
-              <td>Delivery Fee</td>
-              <td>{isFreeDelivery ? 'FREE' : `Rs. ${Number(deliveryFee).toLocaleString()}`}</td>
-            </tr>
-            <tr className="rp-total-grand">
-              <td>Grand Total</td>
-              <td>Rs. {Number(total).toLocaleString()}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* Footer */}
-        <div className="rp-footer">
-          Thank you for shopping with Thisara Stores!<br />
-          Ragama, Western Province, Sri Lanka &nbsp;|&nbsp; Tel: 0707779453<br />
-          This is a computer-generated receipt. 
-        </div>
-
-      </div>
     </>
   )
 }
