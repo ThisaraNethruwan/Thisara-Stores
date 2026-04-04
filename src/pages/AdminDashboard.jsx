@@ -154,7 +154,6 @@ async function exportProductsPDF(products, categories) {
 
       pdf.setFontSize(11)
       let priceStr = p.is_weight_based ? `Rs. ${Number(p.price_per_kg).toLocaleString()} / kg` : `Rs. ${Number(p.price).toLocaleString()}`
-      if (p.unit && !p.is_weight_based) priceStr += ` per ${p.unit}`
       const priceLines = pdf.splitTextToSize(priceStr, colStat - colPri - 5)
 
       let varLines = []
@@ -198,26 +197,13 @@ async function exportProductsPDF(products, categories) {
       pdf.roundedRect(imgX, imgY, dim, dim, 2.5, 2.5, 'D')
 
       let ty = y + 7
-      pdf.setFontSize(12)
+      pdf.setFontSize(10.5)
       pdf.setFont('helvetica', 'bold')
       pdf.setTextColor(20, 40, 30)
       pdf.text(nameLines, colDet, ty)
       ty += nameLines.length * 5
 
-      if (p.badge) {
-        pdf.setFillColor(244, 163, 34)
-        pdf.roundedRect(colDet, ty - 3.5, 20, 5, 1, 1, 'F')
-        pdf.setFontSize(6.5)
-        pdf.setTextColor(60, 30, 0)
-        pdf.text(p.badge.toUpperCase(), colDet + 10, ty, { align: 'center' })
-        ty += 5
-      }
 
-      pdf.setFontSize(8)
-      pdf.setFont('helvetica', 'italic')
-      pdf.setTextColor(120, 140, 130)
-      pdf.text(p.category || '', colDet, ty)
-      ty += 4.5
 
       if (descLines.length > 0) {
         pdf.setFontSize(8.5)
@@ -227,20 +213,20 @@ async function exportProductsPDF(products, categories) {
       }
 
       let py = y + 7
-      pdf.setFontSize(11)
+      pdf.setFontSize(10.5)
       pdf.setFont('helvetica', 'bold')
       pdf.setTextColor(22, 90, 55)
       pdf.text(priceLines, colPri, py)
       py += priceLines.length * 5 + 2
 
       if (varLines.length > 0) {
-        pdf.setFontSize(10)
-        pdf.setFont('helvetica', 'bolditalic')
-        pdf.setTextColor(90, 90, 90)
+        pdf.setFontSize(9.5)
+        pdf.setFont('helvetica', 'bold')
+         pdf.setTextColor(90, 90, 90)
         pdf.text(varLines, colPri, py)
       }
 
-      let sy = y + 5
+      let sy = y + 7
       const isHidden = !p.active
       pdf.setFontSize(9)
       pdf.setFont('helvetica', 'bold')
@@ -248,18 +234,6 @@ async function exportProductsPDF(products, categories) {
       pdf.text(isHidden ? 'HIDDEN' : 'ACTIVE', colStat, sy)
       sy += 5.5
 
-      pdf.setFontSize(8.5)
-      pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(p.stock === 0 ? 200 : 100, p.stock === 0 ? 40 : 100, p.stock === 0 ? 50 : 100)
-      pdf.text(p.stock === 0 ? 'OUT OF STOCK' : `Stock: ${p.stock}`, colStat, sy)
-      sy += 5
-
-      if (p.is_weight_based && p.max_weight) {
-        pdf.setFontSize(8.5)
-        pdf.setFont('helvetica', 'normal')
-        pdf.setTextColor(130, 130, 130)
-        pdf.text(`Max: ${p.max_weight} kg`, colStat, sy)
-      }
 
       y += rowH
     }
@@ -1095,7 +1069,24 @@ export default function AdminDashboard() {
         <div className="adm-sidebar"><SidebarContent /></div>
 
         <div className="adm-main">
-
+          {/* Top bar */}
+          <div className="adm-topbar">
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <button className="adm-hamburger" onClick={() => setSidebarOpen(true)}><span/><span/><span/></button>
+              <div className="adm-topbar-title">{TABS.find(t=>t.id===tab)?.icon} {TABS.find(t=>t.id===tab)?.label}</div>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              {shopHidden && (
+                <div style={{ display:'flex', alignItems:'center', gap:6, background:'rgba(230,57,70,.1)', border:'1.5px solid rgba(230,57,70,.25)', color:'#e63946', padding:'4px 12px', borderRadius:50, fontSize:11, fontWeight:700 }}>
+                  <span style={{ width:7, height:7, borderRadius:'50%', background:'#e63946', display:'inline-block', animation:'pulseWarn 2s ease infinite' }} />
+                  Shop Hidden
+                </div>
+              )}
+              <div style={{ display:'flex', alignItems:'center', gap:6, background:'#f0faf3', border:'1.5px solid #d8f3dc', color:'#1e6641', padding:'4px 12px', borderRadius:50, fontSize:11, fontWeight:700 }}>
+                <span className="live-dot"/> Live
+              </div>
+            </div>
+          </div>
 
           <div className="adm-content">
 
@@ -1353,12 +1344,12 @@ export default function AdminDashboard() {
                   {shopHidden && (
                     <div style={{
                       marginTop:12, display:'flex', alignItems:'center', gap:10,
-                      background:'#ffecec', border:'1.5px solid #fc4d4d',
+                      background:'#fff9ec', border:'1.5px solid #fcd34d',
                       borderRadius:10, padding:'9px 14px',
                     }}>
                       <span style={{ fontSize:18 }}>🙈</span>
                       <div>
-                        <div style={{ fontSize:13, fontWeight:800, color:'#920e0e' }}>Shop is currently hidden from customers</div>
+                        <div style={{ fontSize:13, fontWeight:800, color:'#92400e' }}>Shop is currently hidden from customers</div>
                       </div>
                     </div>
                   )}
