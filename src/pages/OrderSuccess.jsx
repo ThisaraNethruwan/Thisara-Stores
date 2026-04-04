@@ -1,7 +1,9 @@
+import { useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 export default function OrderSuccess() {
   const { state } = useLocation()
+
 
   const name         = state?.name        || 'Customer'
   const orderId      = state?.orderId     || null
@@ -14,7 +16,39 @@ export default function OrderSuccess() {
   const note         = state?.note        || ''
   const items        = state?.items       || []
   const placedAt     = state?.placedAt    || new Date().toISOString()
-  const isPaid       = method === 'card'
+  const isPaid         = method === 'card'
+  const receiptRef     = useRef(null)
+
+  const handleDownloadPDF = async () => {
+  const { default: jsPDF }      = await import('jspdf')
+  const { default: html2canvas } = await import('html2canvas')
+
+  const el = receiptRef.current
+  if (!el) return
+
+  // Temporarily make it visible for capture
+  el.style.display = 'block'
+  el.style.position = 'fixed'
+  el.style.top = '-9999px'
+  el.style.left = '0'
+  el.style.width = '794px'   // A4 width in px at 96dpi
+
+  const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#fff' })
+
+  el.style.display = 'none'
+  el.style.position = ''
+  el.style.top = ''
+  el.style.left = ''
+  el.style.width = ''
+
+  const imgData = canvas.toDataURL('image/png')
+  const pdf     = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' })
+  const pdfW    = pdf.internal.pageSize.getWidth()
+  const pdfH    = (canvas.height * pdfW) / canvas.width
+
+  pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH)
+  pdf.save(`Order-${orderId || 'Receipt'}.pdf`)
+}
   const isFreeDelivery = deliveryFee === 0 && subtotal > 0
 
   const formattedDate = new Date(placedAt).toLocaleString('en-LK', {
@@ -416,9 +450,9 @@ export default function OrderSuccess() {
       
 
           <div className="os-actions">
-            <button className="os-btn-print" onClick={() => window.print()}>
-              🖨️ Print / Save as PDF
-            </button>
+            <button className="os-btn-print" onClick={handleDownloadPDF}>
+  ⬇ Download Receipt (PDF)
+</button>
             <Link to="/" className="os-btn-home">🏠 Back to Home</Link>
           </div>
 
@@ -427,8 +461,7 @@ export default function OrderSuccess() {
 
       {/* ── PRINT-ONLY RECEIPT ───────────────────────────────── */}
       {/* display:none on screen; shown via @media print */}
-      <div className="os-receipt-print-wrap">
-
+      <div className="os-receipt-print-wrap" ref={receiptRef}>
         {/* Header */}
         <div className="rp-header">
           <div className="rp-logo-row">
