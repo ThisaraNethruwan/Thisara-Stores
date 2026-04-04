@@ -40,18 +40,23 @@ export default async function handler(req, res) {
       const num     = idx + 1
       const name    = esc(i.name)
       const sub     = Number(i.subtotal).toLocaleString()
+      
+      // 1. Handle Variation Display (e.g. "Apple (Red)")
+      const variantPart = i.selectedVariant ? ` (${esc(i.selectedVariant)})` : ''
 
-      let qtyPart
+      // 2. Handle Weight Display (Presets vs Custom)
+      let qtyPart = ''
       if (i.isWeightBased) {
-        // Show weight label (e.g. "2.5 kg") AND how many packs/units were ordered
+        // In ProductCard, wOpt.label contains the formatted weight (e.g., "500 g" or "1.5 kg")
         const weightLabel = esc(i.weightLabel || `${i.weightValue} kg`)
-        const packs       = i.qty > 1 ? ` × ${i.qty}` : ''
+        // If they ordered multiple packs of that weight
+        const packs = i.qty > 1 ? ` × ${i.qty}` : ''
         qtyPart = `${weightLabel}${packs}`
       } else {
         qtyPart = `x${i.qty}`
       }
 
-itemLines += `  ${num}. <b>${name}</b>  ${qtyPart}  →  Rs. ${sub}\n`
+      itemLines += `  ${num}. <b>${name}${variantPart}</b>\n      ${qtyPart}  →  Rs. ${sub}\n`
     })
   }
 
@@ -60,8 +65,8 @@ itemLines += `  ${num}. <b>${name}</b>  ${qtyPart}  →  Rs. ${sub}\n`
   if (deliveryLat && deliveryLng) {
     const lat = Number(deliveryLat).toFixed(6)
     const lng = Number(deliveryLng).toFixed(6)
-    
-    locationBlock = `${esc(deliveryAddress)}\n📌 https://maps.google.com/?q=${lat},${lng}`
+    // Fixed Google Maps URL format
+    locationBlock = `${esc(deliveryAddress)}\n📌 <a href="https://www.google.com/maps?q=${lat},${lng}">View on Google Maps</a>`
   }
 
   // ── Payment line ─────────────────────────────────────────────────────────────
@@ -98,7 +103,7 @@ itemLines += `  ${num}. <b>${name}</b>  ${qtyPart}  →  Rs. ${sub}\n`
     `<b>TOTAL:  Rs. ${Number(totalPrice).toLocaleString()}</b>\n` +
     `Payment:  ${paymentLine}\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
-    `<i>Please confirm &amp; arrange delivery 🚚</i>`
+    `<i>Please confirm & arrange delivery 🚚</i>`
 
   try {
     const response = await fetch(
@@ -110,6 +115,7 @@ itemLines += `  ${num}. <b>${name}</b>  ${qtyPart}  →  Rs. ${sub}\n`
           chat_id:    chatId,
           text:       message,
           parse_mode: 'HTML',
+          disable_web_page_preview: false
         }),
       }
     )
@@ -121,7 +127,6 @@ itemLines += `  ${num}. <b>${name}</b>  ${qtyPart}  →  Rs. ${sub}\n`
       return res.status(500).json({ error: 'Telegram send failed', detail: data })
     }
 
-    console.log(`[Telegram] Order ${orderId} notification sent ✅`)
     return res.status(200).json({ success: true })
 
   } catch (err) {
