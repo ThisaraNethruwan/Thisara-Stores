@@ -555,27 +555,6 @@ if (isIOS && !isSafari) {
             </div>
           </div>
 
-          {/* What happens next */}
-          <div className="os-steps-card">
-            <div className="os-steps-title">What happens next?</div>
-            <div className="os-step">
-              <div className="os-step-ico done">✅</div>
-              <div className="os-step-text done">Order received & confirmed</div>
-            </div>
-            <div className="os-step">
-              <div className="os-step-ico done">📦</div>
-              <div className="os-step-text done">We're packing your items</div>
-            </div>
-            <div className="os-step">
-              <div className="os-step-ico pending">🚚</div>
-              <div className="os-step-text pending">Out for delivery</div>
-            </div>
-            <div className="os-step">
-              <div className="os-step-ico pending">🏠</div>
-              <div className="os-step-text pending">Delivered to your door</div>
-            </div>
-          </div>
-
           {/* Actions */}
           <div className="os-actions">
             <button className="os-btn-download" onClick={handleDownloadPDF}>
