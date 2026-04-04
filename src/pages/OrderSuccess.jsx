@@ -566,7 +566,7 @@ const handleDownloadPDF = async () => {
           {/* Actions */}
           <div className="os-actions">
             <button className="os-btn-download" onClick={handleDownloadPDF}>
-              ⬇️ Download Receipt (PDF)
+               Download Receipt (PDF)
             </button>
             <Link to="/" className="os-btn-home">🏠 Back to Home</Link>
           </div>
