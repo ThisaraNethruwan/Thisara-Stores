@@ -588,9 +588,9 @@ export default function AdminDashboard() {
   if (!isAdmin) return null
 
   const TABS = [
-    { id:'overview',   icon:'📊', label:'Overview' },
-    { id:'orders',     icon:'📦', label:'Orders',     badge:stats.pending > 0 ? stats.pending : null },
-    { id:'products',   icon:'🛒', label:'Products' },
+    { id:'overview',   icon:'🏷️', label:'Updates' },
+    { id:'orders',     icon:'🏷️', label:'Orders',     badge:stats.pending > 0 ? stats.pending : null },
+    { id:'products',   icon:'🏷️', label:'Products' },
     { id:'categories', icon:'🏷️', label:'Categories' },
     { id:'reviews',    icon:'⭐', label:'Reviews',    badge:pendingReviews.length > 0 ? pendingReviews.length : null },
   ]
