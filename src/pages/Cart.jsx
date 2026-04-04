@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 
 // ── Short Order ID: TS + 6 random alphanumeric chars  e.g. TS4X9K2M ──────────
 function generateOrderId() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // no ambiguous 0/O/1/I
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
   let suffix = ''
   for (let i = 0; i < 6; i++) suffix += chars[Math.floor(Math.random() * chars.length)]
   return `TS${suffix}`
@@ -36,7 +36,7 @@ async function sendTelegramNotification(payload) {
   } catch (err) { console.error('[Telegram] Error:', err.message) }
 }
 
-/* ── Cart item image component ─────────────────────────────────────────────── */
+/* ── Cart item image ─────────────────────────────────────────────────────────── */
 function ItemImage({ item }) {
   const [imgErr, setImgErr] = useState(false)
   const bg = CAT_COLORS[item.category] || 'linear-gradient(135deg,#d8f3dc,#b7e4c7)'
@@ -61,13 +61,31 @@ function ItemImage({ item }) {
   )
 }
 
-/* ── Card Coming Soon Modal ─────────────────────────────────────────────────── */
+/* ── Weight display helper ────────────────────────────────────────────────────── */
+function WeightPill({ item }) {
+  // Shows "⚖️ 750 g" or "⚖️ 1.5 kg" — highlights custom weights with a subtle badge
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <span>⚖️ {item.weight_label}</span>
+      {item.is_custom_weight && (
+        <span style={{
+          background: '#f0faf3', color: '#1e6641',
+          fontSize: 9, fontWeight: 800,
+          padding: '1px 6px', borderRadius: 50,
+          border: '1px solid #b7e4c7',
+          letterSpacing: '.3px',
+        }}>CUSTOM</span>
+      )}
+    </span>
+  )
+}
+
+/* ── Card Coming Soon Modal ──────────────────────────────────────────────────── */
 function CardComingSoonModal({ onClose }) {
   return (
     <div className="csm-overlay" onClick={onClose}>
       <div className="csm-card" onClick={e => e.stopPropagation()}>
         <button className="csm-close" onClick={onClose} aria-label="Close">✕</button>
-
         <div className="csm-banner">
           <div className="csm-banner-rings">
             <div className="csm-ring csm-ring-1" />
@@ -76,7 +94,6 @@ function CardComingSoonModal({ onClose }) {
           </div>
           <div className="csm-banner-icon">💳</div>
         </div>
-
         <div className="csm-body">
           <div className="csm-badge">Coming Soon</div>
           <h2 className="csm-title">Card Payment</h2>
@@ -84,7 +101,6 @@ function CardComingSoonModal({ onClose }) {
             This feature is <strong>currently under development.</strong> We are working hard to bring you a
             <strong> seamless and secure</strong> online card payment option.
           </p>
-
           <div className="csm-features">
             <div className="csm-feat">
               <div className="csm-feat-icon csm-feat-blue">🔒</div>
@@ -101,12 +117,8 @@ function CardComingSoonModal({ onClose }) {
               </div>
             </div>
           </div>
-
           <div className="csm-divider" />
-
-          <button className="csm-btn-ok" onClick={onClose}>
-            Got it — use Cash on Delivery
-          </button>
+          <button className="csm-btn-ok" onClick={onClose}>Got it — use Cash on Delivery</button>
           <p className="csm-note">We'll notify you as soon as card payments go live 🎉</p>
         </div>
       </div>
@@ -114,7 +126,7 @@ function CardComingSoonModal({ onClose }) {
   )
 }
 
-/* ── Delivery Info Modal ────────────────────────────────────────────────────── */
+/* ── Delivery Info Modal ─────────────────────────────────────────────────────── */
 function DeliveryInfoModal({ grandTotal, onConfirm, onClose, submitting }) {
   return (
     <div className="dim-overlay" onClick={() => !submitting && onClose()}>
@@ -162,7 +174,7 @@ function DeliveryInfoModal({ grandTotal, onConfirm, onClose, submitting }) {
   )
 }
 
-/* ── Cart Page ──────────────────────────────────────────────────────────────── */
+/* ── Cart Page ───────────────────────────────────────────────────────────────── */
 export default function Cart() {
   const { cart, removeFromCart, updateQty, clearCart, total, count } = useCart()
   const navigate = useNavigate()
@@ -216,17 +228,18 @@ export default function Cart() {
     deliveryLng:     location.lng,
     note:            form.note.trim(),
     items: cart.map(i => ({
-      id:            i.id,
-      name:          i.name,
-      category:      i.category,
-      image_url:     i.image_url || '',
-      qty:           i.qty,
-      price:         i.price || i.price_per_kg,
-      isWeightBased: i.is_weight_based,
-      weightValue:   i.weight_value || null,
-      weightLabel:   i.weight_label || null,
+      id:              i.id,
+      name:            i.name,
+      category:        i.category,
+      image_url:       i.image_url || '',
+      qty:             i.qty,
+      price:           i.price || i.price_per_kg,
+      isWeightBased:   i.is_weight_based,
+      weightValue:     i.weight_value || null,
+      weightLabel:     i.weight_label || null,
+      isCustomWeight:  i.is_custom_weight || false,   // ← pass custom flag to order
       selectedVariant: i.selectedVariant || null,
-      subtotal:      i.subtotal,
+      subtotal:        i.subtotal,
     })),
     subtotal:      tot - fee,
     deliveryFee:   fee,
@@ -250,7 +263,31 @@ export default function Cart() {
     await sendTelegramNotification(payload)
     clearCart()
     toast.success("Your order has been placed! We'll be in touch shortly 🎉")
-    navigate('/order-success', { state: { name: form.name, orderId: id, method: 'cod', total: tot } })
+    navigate('/order-success', {
+      state: {
+        name:        form.name,
+        orderId:     id,
+        method:      'cod',
+        total:       tot,
+        subtotal:    total,
+        deliveryFee: fee,
+        phone:       form.phone.replace(/\s/g, ''),
+        address:     location.address,
+        note:        form.note.trim(),
+        placedAt:    new Date().toISOString(),
+        items: cart.map(i => ({
+          name:            i.name,
+          category_emoji:  i.category_emoji || '🛒',
+          qty:             i.qty,
+          price:           i.selectedVariantPrice || i.price || i.price_per_kg,
+          subtotal:        i.subtotal,
+          isWeightBased:   i.is_weight_based,
+          weightLabel:     i.weight_label || null,
+          isCustomWeight:  i.is_custom_weight || false,
+          selectedVariant: i.selectedVariant || null,
+        })),
+      }
+    })
     setSubmitting(false)
   }
 
@@ -322,14 +359,8 @@ export default function Cart() {
         .order-btn { width:100%; padding:16px; border-radius:14px; font-weight:800; font-size:16px; border:none; cursor:pointer; margin-bottom:10px; font-family:'Nunito',sans-serif; transition:all .2s; }
         .order-btn:not(:disabled):hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(30,102,65,.3); }
         .order-btn:disabled { background:#d1d5db !important; color:#9ca3af !important; cursor:not-allowed !important; transform:none !important; box-shadow:none !important; }
-        /* ── iOS touch fix ── */
-.order-btn,
-.pay-opt,
-.qty-btn,
-.ci-rm {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
+        .order-btn, .pay-opt, .qty-btn, .ci-rm { touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+
         @media(max-width:900px) { .cp-grid { grid-template-columns:1fr !important; } .fc { position:static; } }
         @media(max-width:540px) { .ci { flex-wrap:wrap; gap:8px; } .ci-ctrl { width:100%; justify-content:space-between; } }
 
@@ -340,7 +371,6 @@ export default function Cart() {
         .pay-opt { position:relative; border:2px solid #e8ede9; border-radius:14px; padding:14px 12px 12px; cursor:pointer; transition:all .22s; background:#fafafa; display:flex; flex-direction:column; align-items:center; gap:6px; text-align:center; user-select:none; }
         .pay-opt:hover { border-color:#52b788; background:#f0fdf4; }
         .pay-opt.active { border-color:#1e6641; background:#f0fdf4; box-shadow:0 0 0 3px rgba(30,102,65,.1); }
-        .pay-opt.card-opt { cursor:pointer; }
         .pay-opt-icon { font-size:28px; line-height:1; }
         .pay-opt-name { font-size:13px; font-weight:800; color:#1a1a1a; }
         .pay-opt-sub { font-size:11px; color:#888; font-weight:500; line-height:1.4; }
@@ -405,11 +435,9 @@ export default function Cart() {
         .csm-features { display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
         .csm-feat { display:flex; align-items:center; gap:12px; background:#f8f9ff; border-radius:12px; padding:11px 14px; }
         .csm-feat-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
-        .csm-feat-blue   { background:#eff6ff; }
-        .csm-feat-purple { background:#f5f3ff; }
-        .csm-feat-green  { background:#f0fdf4; }
+        .csm-feat-blue { background:#eff6ff; } .csm-feat-purple { background:#f5f3ff; }
         .csm-feat-title { font-size:13px; font-weight:800; color:#1a1a1a; }
-        .csm-feat-sub   { font-size:11.5px; color:#888; margin-top:1px; }
+        .csm-feat-sub { font-size:11.5px; color:#888; margin-top:1px; }
         .csm-divider { height:1px; background:#f0f0f0; margin:0 0 16px; }
         .csm-btn-ok { width:100%; padding:15px; border-radius:13px; background:linear-gradient(135deg,#1a3d28,#1e6641); color:#fff; border:none; font-size:15px; font-weight:800; cursor:pointer; font-family:'Nunito',sans-serif; transition:all .2s; margin-bottom:8px; }
         .csm-btn-ok:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(30,102,65,.3); }
@@ -466,9 +494,16 @@ export default function Cart() {
                           )}
                         </div>
                         <div className="ci-price">
-                          {item.is_weight_based
-                            ? `⚖️ ${item.weight_label} · Rs. ${Number(item.price_per_kg).toLocaleString()}/kg`
-                            : `Rs. ${Number(item.selectedVariantPrice || item.price).toLocaleString()}${item.unit ? ` per ${item.unit}` : ''}`}
+                          {item.is_weight_based ? (
+                            <>
+                              <WeightPill item={item} />
+                              <span style={{ marginLeft: 6, color: '#aaa' }}>
+                                · Rs. {Number(item.price_per_kg).toLocaleString()}/kg
+                              </span>
+                            </>
+                          ) : (
+                            `Rs. ${Number(item.selectedVariantPrice || item.price).toLocaleString()}${item.unit ? ` per ${item.unit}` : ''}`
+                          )}
                         </div>
                       </div>
                       <div className="ci-ctrl">
@@ -477,7 +512,7 @@ export default function Cart() {
                           <span style={{ fontWeight: 800, fontSize: 14, minWidth: 18, textAlign: 'center' }}>{item.qty}</span>
                           <button className="qty-btn" onClick={() => updateQty(item.cartKey, item.qty + 1)}>+</button>
                         </div>
-                        <div className="ci-sub">Rs. {Number(item.subtotal).toLocaleString()}</div>
+                        <div className="ci-sub">Rs. {Number(item.subtotal).toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
                         <button className="ci-rm" onClick={() => removeFromCart(item.cartKey)} aria-label="Remove">✕</button>
                       </div>
                     </div>
@@ -497,7 +532,7 @@ export default function Cart() {
                 <div className="totals">
                   <div className="trow">
                     <span>Subtotal</span>
-                    <span style={{ fontWeight: 700 }}>Rs. {total.toLocaleString()}</span>
+                    <span style={{ fontWeight: 700 }}>Rs. {total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="trow">
                     <span>Delivery fee</span>
@@ -513,7 +548,7 @@ export default function Cart() {
                     <div>
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,.7)', marginBottom: 2 }}>Grand Total</div>
                       <div style={{ fontFamily: 'Fraunces,serif', fontSize: 24, fontWeight: 900 }}>
-                        Rs. {grandTotal.toLocaleString()}
+                        Rs. {grandTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </div>
                     </div>
                     <span style={{ fontSize: 32 }}>💰</span>
@@ -562,7 +597,7 @@ export default function Cart() {
                 <div style={{ background: '#f0faf3', borderRadius: 10, padding: '12px 14px', marginBottom: 14, fontSize: 13 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ color: '#555' }}>Items</span>
-                    <span style={{ fontWeight: 700 }}>Rs. {total.toLocaleString()}</span>
+                    <span style={{ fontWeight: 700 }}>Rs. {total.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <span style={{ color: '#555' }}>Delivery ({location.distKm?.toFixed(1)} km)</span>
@@ -570,7 +605,7 @@ export default function Cart() {
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1.5px solid #d8f3dc', paddingTop: 6, marginTop: 4 }}>
                     <span style={{ fontWeight: 800, color: '#1e6641' }}>Total</span>
-                    <span style={{ fontWeight: 900, color: '#1e6641', fontSize: 16 }}>Rs. {grandTotal.toLocaleString()}</span>
+                    <span style={{ fontWeight: 900, color: '#1e6641', fontSize: 16 }}>Rs. {grandTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               )}
@@ -591,14 +626,10 @@ export default function Cart() {
               <div className="pay-wrap">
                 <span className="pay-label">Payment Method *</span>
                 <div className="pay-options">
-
-                  {/* Cash on Delivery */}
                   <div
                     className={`pay-opt${paymentMethod === 'cod' ? ' active' : ''}`}
                     onClick={() => setPaymentMethod('cod')}
-                    role="radio"
-                    aria-checked={paymentMethod === 'cod'}
-                    tabIndex={0}
+                    role="radio" aria-checked={paymentMethod === 'cod'} tabIndex={0}
                     onKeyDown={e => e.key === 'Enter' && setPaymentMethod('cod')}
                   >
                     <div className="pay-opt-check" />
@@ -606,14 +637,10 @@ export default function Cart() {
                     <div className="pay-opt-name">Cash on Delivery</div>
                     <div className="pay-opt-sub">Pay when your order arrives</div>
                   </div>
-
-                  {/* Card Payment */}
                   <div
                     className={`pay-opt card-opt${paymentMethod === 'card' ? ' active' : ''}`}
                     onClick={() => { setPaymentMethod('card'); setShowCardModal(true) }}
-                    role="radio"
-                    aria-checked={paymentMethod === 'card'}
-                    tabIndex={0}
+                    role="radio" aria-checked={paymentMethod === 'card'} tabIndex={0}
                     onKeyDown={e => e.key === 'Enter' && (setPaymentMethod('card'), setShowCardModal(true))}
                   >
                     <div className="pay-opt-badge">Coming Soon</div>
@@ -622,7 +649,6 @@ export default function Cart() {
                     <div className="pay-opt-name">Card Payment</div>
                     <div className="pay-opt-sub">Visa, Mastercard & more</div>
                   </div>
-
                 </div>
               </div>
 
@@ -640,7 +666,7 @@ export default function Cart() {
                   ? '⏳ Processing your order…'
                   : paymentMethod === 'card'
                   ? '💳 Card Payment — Coming Soon'
-                  : `Place Order — Rs. ${grandTotal.toLocaleString()}`}
+                  : `Place Order — Rs. ${grandTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
               </button>
               <p style={{ fontSize: 12, color: '#999', textAlign: 'center', lineHeight: 1.6 }}>
                 We'll call to confirm your delivery time 📞
